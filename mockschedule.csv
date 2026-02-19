@@ -1,0 +1,111 @@
+﻿day,slot_start,slot_end,workout_code,workout_name,duration_min,trainer,theme
+1,09:00,10:00,start,VibeStart,60,Юля Смирнова,
+1,10:00,11:00,core,VibeCore,60,Кристина Лилова,
+1,11:00,12:30,endurance,VibeEndurance,90,Алина Ковалева,
+1,12:30,13:30,start,VibeStart,60,Андрей Титов,
+1,13:30,15:00,intervals,VibeIntervals,90,Марина Лебедева,"Концерт: Daft Punk — Alive 2007"
+1,15:00,16:00,core,VibeCore,60,Юля Смирнова,
+1,16:00,18:00,cinema,VibeCinema,120,Кристина Лилова,"Фильм: Безумно богатые азиаты (2018)"
+1,18:00,19:00,power,VibePower,60,Андрей Титов,
+1,19:30,21:00,intervals,VibeIntervals,90,Игорь Гареев,"Концерт: Daft Punk — Alive 2007"
+1,21:00,22:00,start,VibeStart,60,Алина Ковалева,
+1,22:00,23:00,power,VibePower,60,Марина Лебедева,
+2,09:00,10:00,start,VibeStart,60,Андрей Титов,
+2,10:00,11:00,core,VibeCore,60,Юля Смирнова,
+2,11:00,12:30,intervals,VibeIntervals,90,Игорь Гареев,"Концерт: The Weeknd — Live at SoFi Stadium (2023)"
+2,12:30,13:30,start,VibeStart,60,Кристина Лилова,
+2,13:30,15:00,endurance,VibeEndurance,90,Алина Ковалева,
+2,15:00,16:00,power,VibePower,60,Марина Лебедева,
+2,16:00,18:00,cinema,VibeCinema,120,Юля Смирнова,"Фильм: Ла-Ла Ленд (2016)"
+2,18:00,19:30,intervals,VibeIntervals,90,Андрей Титов,"Концерт: The Weeknd — Live at SoFi Stadium (2023)"
+2,19:30,21:00,endurance,VibeEndurance,90,Кристина Лилова,
+2,21:00,22:00,core,VibeCore,60,Алина Ковалева,
+2,22:00,23:00,start,VibeStart,60,Игорь Гареев,
+3,09:00,10:00,core,VibeCore,60,Кристина Лилова,
+3,10:00,11:00,start,VibeStart,60,Марина Лебедева,
+3,11:00,12:30,endurance,VibeEndurance,90,Алина Ковалева,
+3,12:30,13:30,power,VibePower,60,Андрей Титов,
+3,13:30,15:00,intervals,VibeIntervals,90,Игорь Гареев,"Концерт: Beyoncé — Homecoming (2019)"
+3,15:00,16:00,start,VibeStart,60,Юля Смирнова,
+3,16:00,18:00,cinema,VibeCinema,120,Кристина Лилова,"Фильм: Барби (2023)"
+3,18:00,19:00,power,VibePower,60,Марина Лебедева,
+3,19:30,21:00,endurance,VibeEndurance,90,Алина Ковалева,
+3,21:00,22:00,core,VibeCore,60,Юля Смирнова,
+3,22:00,23:00,start,VibeStart,60,Андрей Титов,
+4,09:00,10:00,start,VibeStart,60,Игорь Гареев,
+4,10:00,11:00,core,VibeCore,60,Юля Смирнова,
+4,11:00,12:30,intervals,VibeIntervals,90,Марина Лебедева,"Концерт: ODESZA — The Last Goodbye Tour (live)"
+4,12:30,13:30,start,VibeStart,60,Кристина Лилова,
+4,13:30,15:00,endurance,VibeEndurance,90,Алина Ковалева,
+4,15:00,16:00,power,VibePower,60,Андрей Титов,
+4,16:00,18:00,cinema,VibeCinema,120,Юля Смирнова,"Фильм: Дьявол носит Prada (2006)"
+4,18:00,19:30,intervals,VibeIntervals,90,Игорь Гареев,"Концерт: ODESZA — The Last Goodbye Tour (live)"
+4,19:30,21:00,endurance,VibeEndurance,90,Кристина Лилова,
+4,21:00,22:00,start,VibeStart,60,Марина Лебедева,
+4,22:00,23:00,core,VibeCore,60,Алина Ковалева,
+5,09:00,10:00,start,VibeStart,60,Юля Смирнова,
+5,10:00,11:00,power,VibePower,60,Андрей Титов,
+5,11:00,12:30,endurance,VibeEndurance,90,Кристина Лилова,
+5,12:30,13:30,core,VibeCore,60,Юля Смирнова,
+5,13:30,15:00,intervals,VibeIntervals,90,Марина Лебедева,"Концерт: Taylor Swift — The Eras Tour (2023/2024)"
+5,15:00,16:00,start,VibeStart,60,Алина Ковалева,
+5,16:00,18:00,cinema,VibeCinema,120,Кристина Лилова,"Фильм: Малыш на драйве (2017)"
+5,18:00,19:00,power,VibePower,60,Игорь Гареев,
+5,19:30,21:00,intervals,VibeIntervals,90,Андрей Титов,"Концерт: Taylor Swift — The Eras Tour (2023/2024)"
+5,21:00,22:00,core,VibeCore,60,Марина Лебедева,
+5,22:00,23:00,start,VibeStart,60,Игорь Гареев,
+6,09:00,10:00,core,VibeCore,60,Юля Смирнова,
+6,10:00,11:00,start,VibeStart,60,Кристина Лилова,
+6,11:00,12:30,intervals,VibeIntervals,90,Игорь Гареев,"Концерт: Dua Lipa — Studio 2054 (2020)"
+6,12:30,13:30,power,VibePower,60,Марина Лебедева,
+6,13:30,15:00,endurance,VibeEndurance,90,Алина Ковалева,
+6,15:00,16:00,start,VibeStart,60,Андрей Титов,
+6,16:00,18:00,cinema,VibeCinema,120,Юля Смирнова,"Фильм: Человек-паук: Через вселенные (2018)"
+6,18:00,19:30,intervals,VibeIntervals,90,Марина Лебедева,"Концерт: Dua Lipa — Studio 2054 (2020)"
+6,19:30,21:00,endurance,VibeEndurance,90,Кристина Лилова,
+6,21:00,22:00,power,VibePower,60,Андрей Титов,
+6,22:00,23:00,start,VibeStart,60,Алина Ковалева,
+7,09:00,10:00,start,VibeStart,60,Андрей Титов,
+7,10:00,11:00,core,VibeCore,60,Кристина Лилова,
+7,11:00,12:30,endurance,VibeEndurance,90,Алина Ковалева,
+7,12:30,13:30,start,VibeStart,60,Юля Смирнова,
+7,13:30,15:00,intervals,VibeIntervals,90,Игорь Гареев,"Концерт: Coldplay — Live in Buenos Aires (2022)"
+7,15:00,16:00,power,VibePower,60,Марина Лебедева,
+7,16:00,18:00,cinema,VibeCinema,120,Кристина Лилова,"Фильм: Достать ножи (2019)"
+7,18:00,19:00,power,VibePower,60,Андрей Титов,
+7,19:30,21:00,intervals,VibeIntervals,90,Марина Лебедева,"Концерт: Coldplay — Live in Buenos Aires (2022)"
+7,21:00,22:00,core,VibeCore,60,Юля Смирнова,
+7,22:00,23:00,start,VibeStart,60,Игорь Гареев,
+8,09:00,10:00,start,VibeStart,60,Марина Лебедева,
+8,10:00,11:00,core,VibeCore,60,Юля Смирнова,
+8,11:00,12:30,intervals,VibeIntervals,90,Андрей Титов,"Концерт: Arctic Monkeys — Glastonbury (2013)"
+8,12:30,13:30,start,VibeStart,60,Алина Ковалева,
+8,13:30,15:00,endurance,VibeEndurance,90,Кристина Лилова,
+8,15:00,16:00,power,VibePower,60,Игорь Гареев,
+8,16:00,18:00,cinema,VibeCinema,120,Юля Смирнова,"Фильм: Величайший шоумен (2017)"
+8,18:00,19:30,intervals,VibeIntervals,90,Марина Лебедева,"Концерт: Arctic Monkeys — Glastonbury (2013)"
+8,19:30,21:00,endurance,VibeEndurance,90,Алина Ковалева,
+8,21:00,22:00,start,VibeStart,60,Андрей Титов,
+8,22:00,23:00,core,VibeCore,60,Кристина Лилова,
+9,09:00,10:00,core,VibeCore,60,Кристина Лилова,
+9,10:00,11:00,start,VibeStart,60,Игорь Гареев,
+9,11:00,12:30,endurance,VibeEndurance,90,Алина Ковалева,
+9,12:30,13:30,power,VibePower,60,Андрей Титов,
+9,13:30,15:00,intervals,VibeIntervals,90,Марина Лебедева,"Концерт: Lady Gaga — Chromatica Ball (2022)"
+9,15:00,16:00,start,VibeStart,60,Юля Смирнова,
+9,16:00,18:00,cinema,VibeCinema,120,Кристина Лилова,"Фильм: Всё везде и сразу (2022)"
+9,18:00,19:00,power,VibePower,60,Игорь Гареев,
+9,19:30,21:00,intervals,VibeIntervals,90,Андрей Титов,"Концерт: Lady Gaga — Chromatica Ball (2022)"
+9,21:00,22:00,core,VibeCore,60,Марина Лебедева,
+9,22:00,23:00,start,VibeStart,60,Алина Ковалева,
+10,09:00,10:00,start,VibeStart,60,Юля Смирнова,
+10,10:00,11:00,power,VibePower,60,Марина Лебедева,
+10,11:00,12:30,intervals,VibeIntervals,90,Игорь Гареев,"Концерт: Disclosure — Live at Glastonbury (2014)"
+10,12:30,13:30,core,VibeCore,60,Кристина Лилова,
+10,13:30,15:00,endurance,VibeEndurance,90,Алина Ковалева,
+10,15:00,16:00,start,VibeStart,60,Андрей Титов,
+10,16:00,18:00,cinema,VibeCinema,120,Юля Смирнова,"Фильм: Дюна (2021)"
+10,18:00,19:30,intervals,VibeIntervals,90,Марина Лебедева,"Концерт: Disclosure — Live at Glastonbury (2014)"
+10,19:30,21:00,endurance,VibeEndurance,90,Кристина Лилова,
+10,21:00,22:00,power,VibePower,60,Андрей Титов,
+10,22:00,23:00,start,VibeStart,60,Игорь Гареев,

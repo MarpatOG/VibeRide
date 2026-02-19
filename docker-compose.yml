@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: viberide-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: viberide
+      POSTGRES_PASSWORD: viberide
+      POSTGRES_DB: viberide
+    ports:
+      - "5432:5432"
+    volumes:
+      - viberide_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U viberide -d viberide"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  viberide_pgdata:

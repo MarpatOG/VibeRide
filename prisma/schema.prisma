@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  client
+  trainer
+  admin
+}
+
+enum SessionLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum BookingStatus {
+  booked
+  canceled
+}
+
+enum HistoryEventType {
+  completed
+  canceled
+  session_debited
+  membership_update
+}
+
+model User {
+  id            String         @id
+  email         String         @unique
+  name          String
+  lastName      String?
+  role          UserRole
+  locale        String         @default("ru")
+  memberships   Membership[]
+  bookings      Booking[]
+  historyEvents HistoryEvent[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Membership {
+  id                String   @id
+  userId            String
+  remainingSessions Int
+  validUntil        String?
+  active            Boolean  @default(true)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Trainer {
+  id        String    @id
+  name      String
+  lastName  String
+  photoUrl  String
+  tagsJson  Json
+  bioRu     String
+  bioEn     String
+  sessions  Session[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Hall {
+  id        String    @id
+  name      String
+  sessions  Session[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Session {
+  id              String       @id
+  hallId          String
+  startsAt        String
+  durationMin     Int
+  titleRu         String
+  titleEn         String
+  subtitleRu      String
+  subtitleEn      String
+  descriptionRu   String
+  descriptionEn   String
+  isThematic      Boolean      @default(false)
+  trainerId       String?
+  trainerDetached Boolean      @default(false)
+  capacity        Int
+  bookedCount     Int
+  level           SessionLevel
+  hall            Hall         @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  trainer         Trainer?     @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+  bookings        Booking[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([hallId, startsAt])
+}
+
+model Booking {
+  id         String        @id
+  userId     String
+  sessionId  String
+  bikeNumber Int?
+  status     BookingStatus @default(booked)
+  bookedAt   String
+  canceledAt String?
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session    Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([userId, sessionId])
+}
+
+model HistoryEvent {
+  id         String           @id
+  userId     String
+  type       HistoryEventType
+  occurredAt String
+  titleRu    String
+  titleEn    String
+  noteRu     String?
+  noteEn     String?
+  metaJson   Json?
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+
+  @@index([userId, occurredAt])
+}
