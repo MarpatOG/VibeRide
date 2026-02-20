@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "db:init": "node scripts/db-init.mjs",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:schedule:csv": "tsx scripts/seed-schedule-from-csv.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push --skip-generate",
+    "postinstall": "prisma generate",
     "prestart": "npm run db:init",
     "start": "next start",
     "lint": "next lint"
