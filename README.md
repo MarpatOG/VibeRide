@@ -25,7 +25,7 @@ npm start
 
 ## Notes
 
-- Database connection is configured in `.env` via `DATABASE_URL`.
+- Database connection is configured in `.env` via `POSTGRES_PRISMA_URL` (and optionally `POSTGRES_URL_NON_POOLING` for migrations).
 - Docker Desktop must be installed and running before `npm start`.
 
 ## Seed Schedule From CSV
