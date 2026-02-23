@@ -9,13 +9,20 @@ import {useLocale} from '@/lib/locale-client';
 import {useSchedule} from '@/components/blocks/schedule/schedule-context';
 import {useTrainerPool} from '@/components/providers/TrainerPoolProvider';
 import {useSessionPool} from '@/components/providers/SessionPoolProvider';
-import {getIntensityOptionLabel} from '@/components/ui/IntensityScale';
+import {
+  INTENSITY_VALUES,
+  IntensityValue,
+  getIntensityBySession,
+  getIntensityOptionLabelByValue
+} from '@/components/ui/IntensityScale';
 import {Session} from '@/lib/types/session';
 import {getTrainerFullName} from '@/lib/utils/trainer';
 
+type IntensityFilter = '' | `${IntensityValue}`;
+
 type Filters = {
   trainerId: string;
-  difficulty: '' | Session['level'];
+  difficulty: IntensityFilter;
   trainingType: string;
 };
 
@@ -33,9 +40,10 @@ function getLocalDateIso(date: Date) {
 function matchesFilters(session: Session, filters: Filters) {
   const workoutType = getWorkoutTypeBySessionTitle(session.title);
   const sessionTrainingTypeId = workoutType?.scheduleTemplateId ?? '';
+  const sessionIntensity = getIntensityBySession(session.level, session.title);
 
   const trainerOk = !filters.trainerId || filters.trainerId === session.trainerId;
-  const difficultyOk = !filters.difficulty || filters.difficulty === session.level;
+  const difficultyOk = !filters.difficulty || filters.difficulty === `${sessionIntensity}`;
   const trainingTypeOk = !filters.trainingType || filters.trainingType === sessionTrainingTypeId;
 
   return trainerOk && difficultyOk && trainingTypeOk;
@@ -71,13 +79,18 @@ export default function ScheduleFiltersBlock({
     [sessions, todayIso]
   );
 
-  const levelCounts = useMemo(() => {
-    return {
-      any: availableSessions.filter((session) => matchesFilters(session, {trainerId: trainerFilter, difficulty: '', trainingType: trainingTypeFilter})).length,
-      beginner: availableSessions.filter((session) => matchesFilters(session, {trainerId: trainerFilter, difficulty: 'beginner', trainingType: trainingTypeFilter})).length,
-      intermediate: availableSessions.filter((session) => matchesFilters(session, {trainerId: trainerFilter, difficulty: 'intermediate', trainingType: trainingTypeFilter})).length,
-      advanced: availableSessions.filter((session) => matchesFilters(session, {trainerId: trainerFilter, difficulty: 'advanced', trainingType: trainingTypeFilter})).length
-    };
+  const intensityCounts = useMemo(() => {
+    const counts: Record<IntensityFilter, number> = {'': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0};
+    counts[''] = availableSessions.filter((session) =>
+      matchesFilters(session, {trainerId: trainerFilter, difficulty: '', trainingType: trainingTypeFilter})
+    ).length;
+    for (const intensity of INTENSITY_VALUES) {
+      const key = `${intensity}` as IntensityFilter;
+      counts[key] = availableSessions.filter((session) =>
+        matchesFilters(session, {trainerId: trainerFilter, difficulty: key, trainingType: trainingTypeFilter})
+      ).length;
+    }
+    return counts;
   }, [availableSessions, trainerFilter, trainingTypeFilter]);
 
   const trainingTypeCounts = useMemo(() => {
@@ -139,19 +152,19 @@ export default function ScheduleFiltersBlock({
             </span>
             <select
               value={difficultyFilter}
-              onChange={(event) => setDifficultyFilter(event.target.value as '' | Session['level'])}
+              onChange={(event) => setDifficultyFilter(event.target.value as IntensityFilter)}
               className="h-11 rounded-lg border border-border/80 bg-bg px-3 text-sm text-text shadow-sm"
             >
-              <option value="">{`${locale === 'ru' ? 'Любая' : 'Any'} (${levelCounts.any})`}</option>
-              <option value="beginner" disabled={levelCounts.beginner === 0 && difficultyFilter !== 'beginner'}>
-                {`${getIntensityOptionLabel('beginner', locale)} (${levelCounts.beginner})`}
-              </option>
-              <option value="intermediate" disabled={levelCounts.intermediate === 0 && difficultyFilter !== 'intermediate'}>
-                {`${getIntensityOptionLabel('intermediate', locale)} (${levelCounts.intermediate})`}
-              </option>
-              <option value="advanced" disabled={levelCounts.advanced === 0 && difficultyFilter !== 'advanced'}>
-                {`${getIntensityOptionLabel('advanced', locale)} (${levelCounts.advanced})`}
-              </option>
+              <option value="">{`${locale === 'ru' ? 'Любая' : 'Any'} (${intensityCounts['']})`}</option>
+              {INTENSITY_VALUES.map((value) => {
+                const key = `${value}` as IntensityFilter;
+                const count = intensityCounts[key];
+                return (
+                  <option key={value} value={key} disabled={count === 0 && difficultyFilter !== key}>
+                    {`${getIntensityOptionLabelByValue(value, locale)} (${count})`}
+                  </option>
+                );
+              })}
             </select>
           </div>
         )}

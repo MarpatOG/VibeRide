@@ -93,7 +93,7 @@ export const WORKOUT_TYPES: WorkoutType[] = [
       ru: 'Сайклинг + кино на большом экране.',
       en: 'Cycling plus cinema on a big screen.'
     },
-    intensity: 2,
+    intensity: 1,
     color: '#F59E0B',
     label: {ru: 'Фан-формат', en: 'Fun format'}
   }

@@ -5,6 +5,7 @@ import {useSearchParams} from 'next/navigation';
 import {Link} from '@/lib/navigation';
 import {getWorkoutTypeBySessionTitle} from '@/lib/data/workout-types';
 import {Locale} from '@/lib/locale';
+import {getIntensityBySession} from '@/components/ui/IntensityScale';
 import Card from '@/components/ui/Card';
 import {useSchedule} from '@/components/blocks/schedule/schedule-context';
 import {useSessionPool} from '@/components/providers/SessionPoolProvider';
@@ -351,8 +352,9 @@ export default function SessionListBlock({
                   const isSelected = selected?.id === session.id;
                   const workoutType = getWorkoutTypeBySessionTitle(session.title);
                   const sessionTrainingTypeId = workoutType?.scheduleTemplateId ?? '';
+                  const sessionIntensity = getIntensityBySession(session.level, session.title);
                   const matchesTrainer = !trainerFilter || trainerFilter === session.trainerId;
-                  const matchesDifficulty = !difficultyFilter || difficultyFilter === session.level;
+                  const matchesDifficulty = !difficultyFilter || difficultyFilter === `${sessionIntensity}`;
                   const matchesTrainingType = !trainingTypeFilter || trainingTypeFilter === sessionTrainingTypeId;
                   const hasActiveFilters = Boolean(trainerFilter || difficultyFilter || trainingTypeFilter);
                   const isFilterMatch = hasActiveFilters && matchesTrainer && matchesDifficulty && matchesTrainingType;

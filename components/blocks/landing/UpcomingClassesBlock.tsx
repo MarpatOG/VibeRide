@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button';
 import {useSessionPool} from '@/components/providers/SessionPoolProvider';
 import {useTrainerPool} from '@/components/providers/TrainerPoolProvider';
 import {useClientBookings} from '@/components/providers/ClientBookingsProvider';
-import IntensityScale, {getIntensityByLevel, getIntensityColorByLevel, getIntensityLabel} from '@/components/ui/IntensityScale';
+import IntensityScale, {getIntensityBySession, getIntensityColorBySession, getIntensityLabel} from '@/components/ui/IntensityScale';
 import {t} from '@/lib/utils/localized';
 import {getTrainerShortName} from '@/lib/utils/trainer';
 
@@ -277,8 +277,8 @@ export default function UpcomingClassesBlock({
               const available = !isPast && session.bookedCount < session.capacity;
               const alreadyBooked = isBooked(session.id);
               const descriptionPreview = truncateDescription(t(session.description, locale), SCHEDULE_DESCRIPTION_MAX_CHARS);
-              const intensityValue = getIntensityByLevel(session.level);
-              const intensityColor = getIntensityColorByLevel(session.level);
+              const intensityValue = getIntensityBySession(session.level, session.title);
+              const intensityColor = getIntensityColorBySession(session.level, session.title);
               const trainerShortName = trainer ? getTrainerShortName(trainer) : locale === 'ru' ? 'Тренер' : 'Trainer';
               const trainerLabel = trainerShortName.trim() || (locale === 'ru' ? 'Тренер' : 'Trainer');
               const workoutType = getWorkoutTypeBySessionTitle(session.title);

@@ -4,7 +4,7 @@ import {Link} from '@/lib/navigation';
 import {Locale} from '@/lib/locale';
 import {Booking} from '@/lib/types/profile';
 import {formatDateTime} from '@/components/profile/format';
-import IntensityScale, {getIntensityByLevel, getIntensityColorByLevel, getIntensityLabel} from '@/components/ui/IntensityScale';
+import IntensityScale, {getIntensityBySession, getIntensityColorBySession, getIntensityLabel} from '@/components/ui/IntensityScale';
 
 export default function NextSessionCard({
   booking,
@@ -19,8 +19,8 @@ export default function NextSessionCard({
   scheduleHref: string;
   onCancel?: (booking: Booking) => void;
 }) {
-  const intensityValue = booking ? getIntensityByLevel(booking.level) : null;
-  const intensityColor = booking ? getIntensityColorByLevel(booking.level) : null;
+  const intensityValue = booking ? getIntensityBySession(booking.level, booking.title) : null;
+  const intensityColor = booking ? getIntensityColorBySession(booking.level, booking.title) : null;
 
   if (!booking) {
     return (

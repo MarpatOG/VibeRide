@@ -2,7 +2,7 @@
 
 import {CSSProperties, useEffect, useMemo, useRef} from 'react';
 import Badge from '@/components/ui/Badge';
-import IntensityScale, {getIntensityByLevel, getIntensityColorByLevel, getIntensityLabel} from '@/components/ui/IntensityScale';
+import IntensityScale, {getIntensityBySession, getIntensityColorBySession, getIntensityLabel} from '@/components/ui/IntensityScale';
 import {getWorkoutTypeBySessionTitle} from '@/lib/data/workout-types';
 import {Locale} from '@/lib/locale';
 
@@ -125,8 +125,8 @@ export default function TrainerScheduleMatrix({dayGroups, locale}: {dayGroups: D
                     const accentColor = workoutType?.color ?? '#CBD5E1';
                     const sessionTitle = locale === 'ru' ? session.titleRu : session.titleEn;
                     const sessionSubtitle = locale === 'ru' ? session.subtitleRu : session.subtitleEn;
-                    const intensityValue = getIntensityByLevel(session.level);
-                    const intensityColor = getIntensityColorByLevel(session.level);
+                    const intensityValue = getIntensityBySession(session.level, {ru: session.titleRu, en: session.titleEn});
+                    const intensityColor = getIntensityColorBySession(session.level, {ru: session.titleRu, en: session.titleEn});
 
                     return (
                       <div key={session.id} className="rounded-lg border border-border bg-bg-elevated p-3">

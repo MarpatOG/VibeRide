@@ -3,7 +3,7 @@ import Card from '@/components/ui/Card';
 import {Locale} from '@/lib/locale';
 import {Booking} from '@/lib/types/profile';
 import {formatDateTime} from '@/components/profile/format';
-import IntensityScale, {getIntensityByLevel, getIntensityColorByLevel, getIntensityLabel} from '@/components/ui/IntensityScale';
+import IntensityScale, {getIntensityBySession, getIntensityColorBySession, getIntensityLabel} from '@/components/ui/IntensityScale';
 
 export default function BookingCard({
   booking,
@@ -15,8 +15,8 @@ export default function BookingCard({
   onCancel: (booking: Booking) => void;
 }) {
   const isPast = booking.status === 'past';
-  const intensityValue = getIntensityByLevel(booking.level);
-  const intensityColor = getIntensityColorByLevel(booking.level);
+  const intensityValue = getIntensityBySession(booking.level, booking.title);
+  const intensityColor = getIntensityColorBySession(booking.level, booking.title);
 
   return (
     <Card className="p-5">

@@ -4,14 +4,17 @@ import {createContext, useContext, useEffect, useState} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {Session} from '@/lib/types/session';
 import {resolveWorkoutTypeFilterValue} from '@/lib/data/workout-types';
+import {IntensityValue} from '@/components/ui/IntensityScale';
+
+type IntensityFilter = '' | `${IntensityValue}`;
 
 type ScheduleContextValue = {
   selected: Session | null;
   setSelected: (session: Session | null) => void;
   trainerFilter: string;
   setTrainerFilter: (trainerId: string) => void;
-  difficultyFilter: '' | Session['level'];
-  setDifficultyFilter: (difficulty: '' | Session['level']) => void;
+  difficultyFilter: IntensityFilter;
+  setDifficultyFilter: (difficulty: IntensityFilter) => void;
   trainingTypeFilter: string;
   setTrainingTypeFilter: (trainingType: string) => void;
 };
@@ -22,7 +25,7 @@ export function ScheduleProvider({children}: {children: React.ReactNode}) {
   const searchParams = useSearchParams();
   const [selected, setSelected] = useState<Session | null>(null);
   const [trainerFilter, setTrainerFilter] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<'' | Session['level']>('');
+  const [difficultyFilter, setDifficultyFilter] = useState<IntensityFilter>('');
   const [trainingTypeFilter, setTrainingTypeFilter] = useState('');
   const requestedType = searchParams.get('type') ?? '';
 

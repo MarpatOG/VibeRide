@@ -3,7 +3,7 @@
 import {CSSProperties, useEffect, useMemo, useState} from 'react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import IntensityScale, {getIntensityByLevel, getIntensityColorByLevel, getIntensityLabel} from '@/components/ui/IntensityScale';
+import IntensityScale, {getIntensityBySession, getIntensityColorBySession, getIntensityLabel} from '@/components/ui/IntensityScale';
 import {Locale} from '@/lib/locale';
 import {scheduleSlotTimes, scheduleTemplates} from '@/lib/constants/schedule';
 import {WORKOUT_TYPES} from '@/lib/data/workout-types';
@@ -693,8 +693,8 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
                         const hasUnknownTrainer = Boolean(session.trainerId) && !hasCurrentTrainer;
                         const isDetached = Boolean(session.trainerDetached);
                         const tone = isDetached ? DETACHED_TONE : getTemplateTone(templateId);
-                        const intensityValue = getIntensityByLevel(session.level);
-                        const intensityColor = getIntensityColorByLevel(session.level);
+                        const intensityValue = getIntensityBySession(session.level, session.title);
+                        const intensityColor = getIntensityColorBySession(session.level, session.title);
 
                         return (
                           <div
