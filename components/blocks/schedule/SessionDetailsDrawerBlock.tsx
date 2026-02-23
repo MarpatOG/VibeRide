@@ -12,6 +12,7 @@ import {useSessionPool} from '@/components/providers/SessionPoolProvider';
 import {useTrainerPool} from '@/components/providers/TrainerPoolProvider';
 import {t} from '@/lib/utils/localized';
 import {getTrainerFullName, getTrainerShortName} from '@/lib/utils/trainer';
+import {CANCEL_WINDOW_MINUTES_BEFORE_START} from '@/lib/constants/booking';
 
 function isPastSession(startsAt: string, durationMin: number) {
   const startsAtMs = new Date(startsAt).getTime();
@@ -53,7 +54,7 @@ export default function SessionDetailsDrawerBlock({
   const sessionDescription = t(activeSession.description, locale);
   const alreadyBooked = isBooked(activeSession.id);
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (alreadyBooked) {
       setSelected(null);
       router.push('/profile#my-bookings');
@@ -79,8 +80,19 @@ export default function SessionDetailsDrawerBlock({
     }
 
     const plannedBike = Math.min(activeSession.capacity, activeSession.bookedCount + 1);
-    const bookingCreated = bookSession({sessionId: activeSession.id, bikeNumber: plannedBike});
-    if (!bookingCreated) {
+    const bookingResult = await bookSession({sessionId: activeSession.id, bikeNumber: plannedBike});
+    if (!bookingResult.ok) {
+      if (bookingResult.reason === 'no-membership-credits') {
+        addToast({
+          title: locale === 'ru' ? 'Недостаточно тренировок' : 'No session credits',
+          description:
+            locale === 'ru'
+              ? 'Купите абонемент, чтобы записаться на занятие.'
+              : 'Please purchase a membership to reserve this session.',
+          tone: 'warning'
+        });
+        return;
+      }
       addToast({
         title: locale === 'ru' ? 'Вы уже записаны' : 'Already booked',
         description: locale === 'ru' ? 'Проверьте запись в личном кабинете.' : 'Check your profile bookings.',
@@ -158,8 +170,8 @@ export default function SessionDetailsDrawerBlock({
         <p className="text-[15px]">{sessionDescription}</p>
         <div className="text-[14px] text-text-muted">
           {locale === 'ru'
-            ? `Отмена доступна за ${cancelPolicyHours} часа до старта.`
-            : `Cancel up to ${cancelPolicyHours} hours before start.`}
+            ? `Отмена без сгорания доступна за ${Math.floor(CANCEL_WINDOW_MINUTES_BEFORE_START / 60)} ч ${CANCEL_WINDOW_MINUTES_BEFORE_START % 60} мин до старта.`
+            : `Cancellation without burn is available up to ${Math.floor(CANCEL_WINDOW_MINUTES_BEFORE_START / 60)}h ${CANCEL_WINDOW_MINUTES_BEFORE_START % 60}m before start.`}
         </div>
         {showWhatToBring && (
           <div className="rounded-xl border border-border bg-bg-tertiary p-4 text-[15px]">
@@ -168,7 +180,11 @@ export default function SessionDetailsDrawerBlock({
               : 'Bring water and sportswear. Cycling shoes are provided.'}
           </div>
         )}
-        <Button className="w-full text-[17px]" onClick={handleBook} disabled={isPast || (!available && !alreadyBooked)}>
+        <Button
+          className="w-full text-[17px]"
+          onClick={() => void handleBook()}
+          disabled={isPast || (!available && !alreadyBooked)}
+        >
           {alreadyBooked
             ? locale === 'ru'
               ? 'Открыть запись'

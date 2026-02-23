@@ -14,7 +14,11 @@ type ClientBookingsContextValue = {
   bookings: ClientBookingRecord[];
   isBooked: (sessionId: string) => boolean;
   getBooking: (sessionId: string) => ClientBookingRecord | null;
-  bookSession: (payload: {sessionId: string; bikeNumber?: number}) => boolean;
+  bookSession: (payload: {sessionId: string; bikeNumber?: number}) => Promise<{
+    ok: boolean;
+    reason?: string;
+    remainingSessions?: number;
+  }>;
   cancelSession: (sessionId: string) => boolean;
 };
 
@@ -67,30 +71,37 @@ export function ClientBookingsProvider({children}: {children: React.ReactNode}) 
       bookings,
       isBooked: (sessionId) => bookings.some((item) => item.sessionId === sessionId),
       getBooking: (sessionId) => bookings.find((item) => item.sessionId === sessionId) ?? null,
-      bookSession: ({sessionId, bikeNumber}) => {
+      bookSession: async ({sessionId, bikeNumber}) => {
         if (bookings.some((item) => item.sessionId === sessionId)) {
-          return false;
+          return {ok: false, reason: 'already-booked'};
         }
-        const optimistic: ClientBookingRecord = {
-          sessionId,
-          bookedAt: new Date().toISOString(),
-          bikeNumber
-        };
-        setBookings((prev) => [...prev, optimistic]);
-        void fetch('/api/bookings', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({userId: DEMO_USER_ID, sessionId, bikeNumber})
-        })
-          .then(async (response) => {
-            if (response.ok) return;
-            setBookings((prev) => prev.filter((item) => item.sessionId !== sessionId));
-          })
-          .catch((error) => {
-            console.error('Unable to persist booking to DB.', error);
-            setBookings((prev) => prev.filter((item) => item.sessionId !== sessionId));
+        try {
+          const response = await fetch('/api/bookings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({userId: DEMO_USER_ID, sessionId, bikeNumber})
           });
-        return true;
+          const payload = (await response.json().catch(() => null)) as
+            | {sessionId?: string; bookedAt?: string; bikeNumber?: number; remainingSessions?: number; reason?: string}
+            | null;
+          if (!response.ok || !payload?.sessionId || !payload.bookedAt) {
+            return {ok: false, reason: payload?.reason ?? `http-${response.status}`};
+          }
+
+          const record: ClientBookingRecord = {
+            sessionId: payload.sessionId,
+            bookedAt: payload.bookedAt,
+            bikeNumber: payload.bikeNumber
+          };
+          setBookings((prev) => {
+            const alreadyExists = prev.some((item) => item.sessionId === record.sessionId);
+            return alreadyExists ? prev : [...prev, record];
+          });
+          return {ok: true, remainingSessions: payload.remainingSessions};
+        } catch (error) {
+          console.error('Unable to persist booking to DB.', error);
+          return {ok: false, reason: 'network-error'};
+        }
       },
       cancelSession: (sessionId) => {
         const exists = bookings.some((item) => item.sessionId === sessionId);

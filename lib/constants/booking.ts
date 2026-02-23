@@ -1,0 +1,1 @@
+export const CANCEL_WINDOW_MINUTES_BEFORE_START = 23 * 60 + 59;

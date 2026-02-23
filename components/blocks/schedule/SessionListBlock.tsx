@@ -102,8 +102,9 @@ export default function SessionListBlock({
   const {sessions} = useSessionPool();
   const {trainers} = useTrainerPool();
   const topScrollerRef = useRef<HTMLDivElement | null>(null);
-  const contentTrackRef = useRef<HTMLDivElement | null>(null);
+  const contentScrollerRef = useRef<HTMLDivElement | null>(null);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
+  const [topTrackWidth, setTopTrackWidth] = useState(0);
   const searchParams = useSearchParams();
   const autoOpenedSessionRef = useRef<string | null>(null);
   const sessionIdFromQuery = searchParams.get('session');
@@ -169,18 +170,42 @@ export default function SessionListBlock({
   useEffect(() => {
     if (days.length === 0) return;
     const topScroller = topScrollerRef.current;
-    const contentTrack = contentTrackRef.current;
-    if (!topScroller || !contentTrack) return;
+    const contentScroller = contentScrollerRef.current;
+    if (!topScroller || !contentScroller) return;
 
-    const syncFromTop = () => {
-      contentTrack.style.transform = `translateX(${-topScroller.scrollLeft}px)`;
+    let isSyncing = false;
+
+    const updateTrackWidth = () => {
+      setTopTrackWidth(contentScroller.scrollWidth);
     };
 
-    topScroller.scrollLeft = 0;
-    syncFromTop();
-    topScroller.addEventListener('scroll', syncFromTop, {passive: true});
+    const syncTopFromContent = () => {
+      if (isSyncing) return;
+      isSyncing = true;
+      topScroller.scrollLeft = contentScroller.scrollLeft;
+      isSyncing = false;
+    };
+
+    const syncContentFromTop = () => {
+      if (isSyncing) return;
+      isSyncing = true;
+      contentScroller.scrollLeft = topScroller.scrollLeft;
+      isSyncing = false;
+    };
+
+    updateTrackWidth();
+    contentScroller.addEventListener('scroll', syncTopFromContent, {passive: true});
+    topScroller.addEventListener('scroll', syncContentFromTop, {passive: true});
+    window.addEventListener('resize', updateTrackWidth);
+
+    const resizeObserver = new ResizeObserver(updateTrackWidth);
+    resizeObserver.observe(contentScroller);
+
     return () => {
-      topScroller.removeEventListener('scroll', syncFromTop);
+      contentScroller.removeEventListener('scroll', syncTopFromContent);
+      topScroller.removeEventListener('scroll', syncContentFromTop);
+      window.removeEventListener('resize', updateTrackWidth);
+      resizeObserver.disconnect();
     };
   }, [days.length]);
 
@@ -204,7 +229,7 @@ export default function SessionListBlock({
         className="mt-[5px] mb-[5px] overflow-x-auto scrollbar-minimal touch-pan-x"
         aria-label={locale === 'ru' ? 'Верхняя прокрутка расписания' : 'Top schedule scroll'}
       >
-        <div className="min-w-[980px]">
+        <div style={{width: `${topTrackWidth}px`}}>
           <div className="grid gap-3" style={gridStyle}>
             {days.map((day) => (
               <div key={`${day}-top-scroll`} className="h-2 rounded-full bg-border/65" />
@@ -212,8 +237,11 @@ export default function SessionListBlock({
           </div>
         </div>
       </div>
-      <div className="overflow-x-hidden pb-2">
-        <div ref={contentTrackRef} className="min-w-[980px] will-change-transform">
+      <div
+        ref={contentScrollerRef}
+        className="overflow-x-auto pb-2 scrollbar-hidden touch-pan-x overscroll-x-contain"
+      >
+        <div className="min-w-[980px]">
           <div className="mb-1 grid gap-3" style={gridStyle}>
             {days.map((day) => (
               <div key={day} className="px-1 pb-1 text-sm font-semibold uppercase text-text-muted">

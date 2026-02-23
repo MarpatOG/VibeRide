@@ -18,14 +18,14 @@ import {useTrainerPool} from '@/components/providers/TrainerPoolProvider';
 import {useClientBookings} from '@/components/providers/ClientBookingsProvider';
 import {t} from '@/lib/utils/localized';
 import {getTrainerFullName} from '@/lib/utils/trainer';
+import {CANCEL_WINDOW_MINUTES_BEFORE_START} from '@/lib/constants/booking';
 
-const FREE_CANCEL_HOURS = 24;
 const DEMO_USER_ID = 'u-client';
 type SaveState = 'idle' | 'saving' | 'success' | 'error';
 
 function buildFreeCancelUntilIso(startsAt: string) {
   const startMs = new Date(startsAt).getTime();
-  return new Date(startMs - FREE_CANCEL_HOURS * 60 * 60 * 1000).toISOString();
+  return new Date(startMs - CANCEL_WINDOW_MINUTES_BEFORE_START * 60_000).toISOString();
 }
 
 export default function ProfileDashboardPage() {

@@ -15,8 +15,6 @@ import {getTrainerShortName} from '@/lib/utils/trainer';
 
 const PAST_STATUS_REFRESH_MS = 30_000;
 const SCHEDULE_DESCRIPTION_MAX_CHARS = 72;
-const MOBILE_CAROUSEL_QUERY = '(max-width: 767px)';
-const MOBILE_CAROUSEL_INTERVAL_MS = 5_000;
 const UPCOMING_ITEMS_LIMIT = 12;
 
 function formatSessionDayLabel(dateKey: string, locale: Locale) {
@@ -176,83 +174,6 @@ export default function UpcomingClassesBlock({
     };
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const contentScroller = contentScrollerRef.current;
-    if (!contentScroller || items.length < 2) return;
-
-    const mediaQuery = window.matchMedia(MOBILE_CAROUSEL_QUERY);
-    let intervalId: number | null = null;
-
-    const getCards = () => Array.from(contentScroller.querySelectorAll<HTMLElement>('[data-upcoming-card="true"]'));
-
-    const scrollToNextCard = () => {
-      if (document.hidden) return;
-      const cards = getCards();
-      if (cards.length < 2) return;
-
-      const currentLeft = contentScroller.scrollLeft;
-      let nearestIndex = 0;
-      let minDistance = Number.POSITIVE_INFINITY;
-
-      cards.forEach((card, index) => {
-        const distance = Math.abs(card.offsetLeft - currentLeft);
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestIndex = index;
-        }
-      });
-
-      const nextIndex = (nearestIndex + 1) % cards.length;
-      const nextCard = cards[nextIndex];
-      if (!nextCard) return;
-
-      contentScroller.scrollTo({
-        left: nextCard.offsetLeft,
-        behavior: 'smooth'
-      });
-    };
-
-    const startAutoCarousel = () => {
-      if (!mediaQuery.matches) return;
-      if (intervalId !== null) {
-        window.clearInterval(intervalId);
-      }
-      intervalId = window.setInterval(scrollToNextCard, MOBILE_CAROUSEL_INTERVAL_MS);
-    };
-
-    const stopAutoCarousel = () => {
-      if (intervalId === null) return;
-      window.clearInterval(intervalId);
-      intervalId = null;
-    };
-
-    const handleViewportChange = () => {
-      if (mediaQuery.matches) {
-        startAutoCarousel();
-      } else {
-        stopAutoCarousel();
-      }
-    };
-
-    handleViewportChange();
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', handleViewportChange);
-    } else {
-      mediaQuery.addListener(handleViewportChange);
-    }
-
-    return () => {
-      stopAutoCarousel();
-      if (typeof mediaQuery.removeEventListener === 'function') {
-        mediaQuery.removeEventListener('change', handleViewportChange);
-      } else {
-        mediaQuery.removeListener(handleViewportChange);
-      }
-    };
-  }, [items.length]);
-
   const formatSessionDate = (startsAt: string) => {
     return formatSessionDayLabel(startsAt.slice(0, 10), locale);
   };
@@ -313,7 +234,7 @@ export default function UpcomingClassesBlock({
           </div>
           <div
             ref={contentScrollerRef}
-            className="overflow-x-auto bg-transparent pb-4 scrollbar-hidden snap-x snap-mandatory touch-pan-x sm:snap-none"
+            className="overflow-x-auto bg-transparent pb-4 scrollbar-hidden snap-x snap-mandatory touch-pan-x overscroll-x-contain sm:snap-none"
           >
             <div className="flex gap-5 bg-transparent py-1 pl-0 pr-1 sm:px-1">
             {items.map((session) => {
