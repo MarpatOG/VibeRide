@@ -96,57 +96,66 @@ export default function WorkoutTypesBlock({
 
   return (
     <section className="container-wide py-6 md:py-7">
-      <div className="rounded-2xl border border-border bg-bg-elevated/70 p-3 md:p-4">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-xl font-semibold md:text-2xl">{title}</h2>
-          <p className="mt-1 text-sm leading-tight text-text-muted md:text-base">{subtitle}</p>
-        </div>
+      <div className="mx-auto max-w-3xl text-center">
+        <h2 className="text-xl font-semibold md:text-2xl">{title}</h2>
+        <p className="mt-1 text-sm leading-tight text-text-muted md:text-base">{subtitle}</p>
+      </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {WORKOUT_TYPES.map((type) => (
-            <button
-              key={type.id}
-              type="button"
-              onClick={() => setActiveTypeId(type.id)}
-              className="group relative overflow-hidden rounded-[16px] border border-border bg-bg-elevated px-4 pt-3 pb-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-md md:px-5 md:pt-3 md:pb-4"
-            >
-              <span
-                className="absolute top-0 left-0 h-full w-1 rounded-l-[16px] transition-opacity duration-200 group-hover:opacity-100"
-                style={{backgroundColor: type.color, opacity: 0.85}}
-                aria-hidden="true"
-              />
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {WORKOUT_TYPES.map((type) => (
+          <button
+            key={type.id}
+            type="button"
+            onClick={() => setActiveTypeId(type.id)}
+            className="group relative overflow-hidden rounded-[16px] border border-border bg-bg-elevated px-4 pt-3 pb-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-md md:px-5 md:pt-3 md:pb-4"
+          >
+            <span
+              className="absolute top-0 left-0 h-full w-1 rounded-l-[16px] transition-opacity duration-200 group-hover:opacity-100"
+              style={{backgroundColor: type.color, opacity: 0.85}}
+              aria-hidden="true"
+            />
 
-              <div className="pl-3">
-                <h3 className="text-lg font-semibold">{type.name}</h3>
-                <p className="mt-0.5 min-h-[2.1rem] overflow-hidden text-sm leading-[1.1rem] text-text-muted [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                  {getWorkoutTypeDescription(type, locale)}
-                </p>
+            <div className="pl-3">
+              <h3 className="text-lg font-semibold">{type.name}</h3>
+              <p className="mt-0.5 min-h-[2.1rem] overflow-hidden text-sm leading-[1.1rem] text-text-muted [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                {getWorkoutTypeDescription(type, locale)}
+              </p>
 
-                <div className="mt-0.5 flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold tracking-[0.06em] uppercase text-text-muted">
-                    {locale === 'ru' ? 'Длительность' : 'Duration'}
-                  </span>
-                  <span className="text-xs font-semibold text-text-muted">
-                    {type.durationMin} {locale === 'ru' ? 'мин' : 'min'}
-                  </span>
-                </div>
-
-                <div className="mt-0.5 flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold tracking-[0.06em] uppercase text-text-muted">
-                    {locale === 'ru' ? 'Интенсивность' : 'Intensity'}
-                  </span>
-                  <IntensityScale value={type.intensity} color={type.color} />
-                </div>
+              <div className="mt-0.5 flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold tracking-[0.06em] uppercase text-text-muted">
+                  {locale === 'ru' ? 'Длительность' : 'Duration'}
+                </span>
+                <span className="text-xs font-semibold text-text-muted">
+                  {type.durationMin} {locale === 'ru' ? 'мин' : 'min'}
+                </span>
               </div>
-            </button>
-          ))}
-        </div>
+
+              <div className="mt-0.5 flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold tracking-[0.06em] uppercase text-text-muted">
+                  {locale === 'ru' ? 'Интенсивность' : 'Intensity'}
+                </span>
+                <IntensityScale value={type.intensity} color={type.color} />
+              </div>
+            </div>
+          </button>
+        ))}
       </div>
 
       <Modal
         open={Boolean(activeType && activeContent)}
         onClose={() => setActiveTypeId(null)}
-        title={activeType?.name}
+        title={
+          activeType ? (
+            <span className="inline-flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="h-5 w-1.5 shrink-0 rounded-full"
+                style={{backgroundColor: activeType.color}}
+              />
+              <span>{activeType.name}</span>
+            </span>
+          ) : undefined
+        }
         className="max-w-2xl"
       >
         {activeContent ? (

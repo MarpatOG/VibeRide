@@ -76,6 +76,8 @@ export default function UpcomingClassesBlock({
   const {isBooked} = useClientBookings();
   const topScrollerRef = useRef<HTMLDivElement | null>(null);
   const contentScrollerRef = useRef<HTMLDivElement | null>(null);
+  const swipeStartRef = useRef<{x: number; y: number} | null>(null);
+  const cardStepRef = useRef(0);
   const [topTrackWidth, setTopTrackWidth] = useState(0);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
   const ctaLabel = ctaAllLabel.replace(/\s*[→>-]+\s*$/, '').trim();
@@ -133,6 +135,10 @@ export default function UpcomingClassesBlock({
 
     const updateTrackWidth = () => {
       setTopTrackWidth(contentScroller.scrollWidth);
+      const card = contentScroller.querySelector<HTMLElement>('[data-upcoming-card="true"]');
+      const row = contentScroller.firstElementChild as HTMLElement | null;
+      const gap = row ? Number.parseFloat(getComputedStyle(row).columnGap || '0') : 0;
+      cardStepRef.current = card ? card.offsetWidth + (Number.isFinite(gap) ? gap : 0) : 0;
     };
 
     const syncTopFromContent = () => {
@@ -164,6 +170,31 @@ export default function UpcomingClassesBlock({
       resizeObserver.disconnect();
     };
   }, [items.length]);
+
+  const onContentTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const point = event.touches[0];
+    if (!point) return;
+    swipeStartRef.current = {x: point.clientX, y: point.clientY};
+  };
+
+  const onContentTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const point = event.changedTouches[0];
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!point || !start) return;
+
+    const deltaX = point.clientX - start.x;
+    const deltaY = point.clientY - start.y;
+    if (Math.abs(deltaX) < 32 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+    const contentScroller = contentScrollerRef.current;
+    if (!contentScroller) return;
+
+    const step = cardStepRef.current || Math.round(contentScroller.clientWidth * 0.86);
+    const direction = deltaX < 0 ? 1 : -1;
+    const nextLeft = Math.max(0, contentScroller.scrollLeft + direction * step);
+    contentScroller.scrollTo({left: nextLeft, behavior: 'smooth'});
+  };
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -234,7 +265,10 @@ export default function UpcomingClassesBlock({
           </div>
           <div
             ref={contentScrollerRef}
-            className="overflow-x-auto bg-transparent pb-4 scrollbar-hidden snap-x snap-mandatory touch-pan-x overscroll-x-contain sm:snap-none"
+            className="overflow-x-auto bg-transparent pb-4 scrollbar-hidden snap-x snap-mandatory touch-auto overscroll-x-contain sm:snap-none"
+            onTouchStart={onContentTouchStart}
+            onTouchEnd={onContentTouchEnd}
+            style={{touchAction: 'manipulation'}}
           >
             <div className="flex gap-5 bg-transparent py-1 pl-0 pr-1 sm:px-1">
             {items.map((session) => {

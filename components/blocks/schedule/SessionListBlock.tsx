@@ -314,12 +314,18 @@ export default function SessionListBlock({
 
       <div
         ref={contentScrollerRef}
-        className="overflow-x-auto pb-2 scrollbar-hidden touch-pan-x overscroll-x-contain"
+        className="overflow-x-auto pb-2 scrollbar-hidden touch-auto overscroll-x-contain"
+        style={{touchAction: 'manipulation'}}
       >
         <div style={{minWidth: `${Math.max(980, visibleDays.length * 220)}px`}}>
           <div className="mb-1 grid gap-3" style={gridStyle}>
-            {visibleDays.map((day) => (
-              <div key={day} className="px-1 pb-1 text-sm font-semibold uppercase text-text-muted">
+            {visibleDays.map((day, dayIndex) => (
+              <div
+                key={day}
+                className={`rounded-lg px-2 pb-1 pt-2 text-sm font-semibold uppercase text-text-muted ${
+                  dayIndex % 2 === 0 ? 'bg-bg-elevated/80' : 'bg-bg-tertiary/60'
+                }`}
+              >
                 {formatDayLabel(day, locale)}
               </div>
             ))}
@@ -327,7 +333,12 @@ export default function SessionListBlock({
 
           <div className="grid gap-3" style={gridStyle}>
             {visibleByDay.map((daySessions, dayIndex) => (
-              <div key={visibleDays[dayIndex]} className="flex flex-col gap-2">
+              <div
+                key={visibleDays[dayIndex]}
+                className={`flex flex-col gap-2 rounded-lg p-2 ${
+                  dayIndex % 2 === 0 ? 'bg-bg-elevated/80' : 'bg-bg-tertiary/60'
+                }`}
+              >
                 {daySessions.map((session) => {
                   const trainer = trainers.find((item) => item.id === session.trainerId);
                   const isPast = isPastSession(session.startsAt, session.durationMin, nowTimestamp);
