@@ -217,6 +217,7 @@ export default function SessionListBlock({
 
   const [activeWeekStartIndex, setActiveWeekStartIndex] = useState(0);
   const [activeMobileDayIndex, setActiveMobileDayIndex] = useState(0);
+  const [isMobileDaysExpanded, setIsMobileDaysExpanded] = useState(false);
 
   useEffect(() => {
     if (weekRanges.length === 0) {
@@ -259,6 +260,10 @@ export default function SessionListBlock({
     }
   }, [selected, days, activeMobileDayIndex]);
 
+  useEffect(() => {
+    setIsMobileDaysExpanded(false);
+  }, [activeMobileDayIndex]);
+
   const visibleDays = useMemo(
     () => days.slice(activeWeekStartIndex, activeWeekStartIndex + DAYS_IN_WEEK),
     [days, activeWeekStartIndex]
@@ -275,6 +280,14 @@ export default function SessionListBlock({
     );
     return foundIndex >= 0 ? foundIndex : 0;
   }, [weekRanges, activeMobileDayIndex]);
+  const activeMobileWeekRange = weekRanges[activeMobileWeekIndex] ?? null;
+  const activeMobileWeekDayIndices = useMemo(() => {
+    if (!activeMobileWeekRange) return [];
+    return Array.from(
+      {length: activeMobileWeekRange.endIndex - activeMobileWeekRange.startIndex + 1},
+      (_, index) => activeMobileWeekRange.startIndex + index
+    );
+  }, [activeMobileWeekRange]);
   const activeMobileDayIso = days[activeMobileDayIndex] ?? '';
   const activeMobileDaySessions = byDay[activeMobileDayIndex] ?? [];
   const canGoMobilePrev = activeMobileDayIndex > 0;
@@ -299,11 +312,15 @@ export default function SessionListBlock({
     if (!canGoMobileNext) return;
     setActiveMobileDayIndex((prev) => Math.min(days.length - 1, prev + 1));
   }, [canGoMobileNext, days.length]);
+  const toggleMobileDays = useCallback(() => {
+    setIsMobileDaysExpanded((prev) => !prev);
+  }, []);
   const goMobileWeek = useCallback(
     (weekIndex: number) => {
       const targetRange = weekRanges[weekIndex];
       if (!targetRange) return;
       setActiveMobileDayIndex(targetRange.startIndex);
+      setIsMobileDaysExpanded(false);
     },
     [weekRanges]
   );
@@ -372,56 +389,93 @@ export default function SessionListBlock({
   return (
     <section className="container-schedule pt-0">
       <div className="md:hidden">
-        <div className="mb-2 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => goMobileWeek(0)}
-            className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
-              activeMobileWeekIndex === 0
-                ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
-                : 'border-border bg-bg-elevated text-text-muted'
-            }`}
-          >
-            {locale === 'ru' ? 'Текущая неделя' : 'Current week'}
-          </button>
-          <button
-            type="button"
-            onClick={() => goMobileWeek(1)}
-            disabled={weekRanges.length < 2}
-            className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
-              activeMobileWeekIndex === 1
-                ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
-                : 'border-border bg-bg-elevated text-text-muted'
-            } disabled:cursor-not-allowed disabled:opacity-40`}
-          >
-            {locale === 'ru' ? 'Следующая неделя' : 'Next week'}
-          </button>
-        </div>
-        <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-elevated px-3 py-2">
-          <button
-            type="button"
-            onClick={goMobilePrevDay}
-            disabled={!canGoMobilePrev}
-            className="h-9 w-9 rounded-full border border-border text-xl leading-none text-text-muted disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label={locale === 'ru' ? 'Предыдущий день' : 'Previous day'}
-          >
-            ←
-          </button>
-          <div className="min-w-0 text-center">
-            <div className="text-sm font-semibold uppercase text-text">
-              {activeMobileDayIso ? formatDayLabel(activeMobileDayIso, locale) : ''}
-            </div>
-            <div className="text-[11px] text-text-muted">{activeMobileDayIso}</div>
+        <div className="sticky top-20 z-30 mb-3 rounded-xl border border-border bg-bg/95 p-2 backdrop-blur">
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => goMobileWeek(0)}
+              className={`rounded-full border px-2 py-2 text-[11px] font-semibold transition ${
+                activeMobileWeekIndex === 0
+                  ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
+                  : 'border-border bg-bg-elevated text-text-muted'
+              }`}
+            >
+              {locale === 'ru' ? 'Текущая неделя' : 'Current week'}
+            </button>
+            <button
+              type="button"
+              onClick={() => goMobileWeek(1)}
+              disabled={weekRanges.length < 2}
+              className={`rounded-full border px-2 py-2 text-[11px] font-semibold transition ${
+                activeMobileWeekIndex === 1
+                  ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
+                  : 'border-border bg-bg-elevated text-text-muted'
+              } disabled:cursor-not-allowed disabled:opacity-40`}
+            >
+              {locale === 'ru' ? 'Следующая неделя' : 'Next week'}
+            </button>
+            <button
+              type="button"
+              onClick={toggleMobileDays}
+              className={`rounded-full border px-2 py-2 text-[11px] font-semibold transition ${
+                isMobileDaysExpanded
+                  ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
+                  : 'border-border bg-bg-elevated text-text-muted'
+              }`}
+            >
+              {locale === 'ru' ? 'Дни' : 'Days'}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={goMobileNextDay}
-            disabled={!canGoMobileNext}
-            className="h-9 w-9 rounded-full border border-border text-xl leading-none text-text-muted disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label={locale === 'ru' ? 'Следующий день' : 'Next day'}
-          >
-            →
-          </button>
+
+          {isMobileDaysExpanded && (
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hidden">
+              {activeMobileWeekDayIndices.map((dayIndex) => {
+                const dayIso = days[dayIndex];
+                const active = dayIndex === activeMobileDayIndex;
+                return (
+                  <button
+                    key={dayIso}
+                    type="button"
+                    onClick={() => setActiveMobileDayIndex(dayIndex)}
+                    className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      active
+                        ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
+                        : 'border-border bg-bg-elevated text-text-muted'
+                    }`}
+                  >
+                    {formatDayLabel(dayIso, locale)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-elevated px-3 py-2">
+            <button
+              type="button"
+              onClick={goMobilePrevDay}
+              disabled={!canGoMobilePrev}
+              className="h-9 w-9 rounded-full border border-border text-xl leading-none text-text-muted disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label={locale === 'ru' ? 'Предыдущий день' : 'Previous day'}
+            >
+              ←
+            </button>
+            <div className="min-w-0 text-center">
+              <div className="text-sm font-semibold uppercase text-text">
+                {activeMobileDayIso ? formatDayLabel(activeMobileDayIso, locale) : ''}
+              </div>
+              <div className="text-[11px] text-text-muted">{activeMobileDayIso}</div>
+            </div>
+            <button
+              type="button"
+              onClick={goMobileNextDay}
+              disabled={!canGoMobileNext}
+              className="h-9 w-9 rounded-full border border-border text-xl leading-none text-text-muted disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label={locale === 'ru' ? 'Следующий день' : 'Next day'}
+            >
+              →
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2 rounded-lg bg-bg-elevated/80 p-2">

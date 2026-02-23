@@ -17,10 +17,11 @@ const PAST_STATUS_REFRESH_MS = 30_000;
 const SCHEDULE_DESCRIPTION_MAX_CHARS = 72;
 const UPCOMING_ITEMS_LIMIT = 12;
 const SWIPE_CARD_STEP_THRESHOLD_PX = 14;
-const SWIPE_ANIMATION_DURATION_MS = 220;
+const SWIPE_ANIMATION_DURATION_MS = 280;
 
-function easeOutCubic(progress: number) {
-  return 1 - (1 - progress) ** 3;
+function easeInOutCubic(progress: number) {
+  if (progress < 0.5) return 4 * progress * progress * progress;
+  return 1 - ((-2 * progress + 2) ** 3) / 2;
 }
 
 function formatSessionDayLabel(dateKey: string, locale: Locale) {
@@ -213,7 +214,7 @@ export default function UpcomingClassesBlock({
     const tick = (now: number) => {
       const elapsed = now - startedAt;
       const progress = Math.min(1, elapsed / SWIPE_ANIMATION_DURATION_MS);
-      const eased = easeOutCubic(progress);
+      const eased = easeInOutCubic(progress);
       element.scrollLeft = startLeft + (targetLeft - startLeft) * eased;
       if (progress < 1) {
         swipeAnimationFrameRef.current = requestAnimationFrame(tick);
