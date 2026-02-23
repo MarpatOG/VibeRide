@@ -1,6 +1,6 @@
 'use client';
 
-import {createContext, useContext, useEffect, useMemo, useState} from 'react';
+import {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import {dayNumberToDateIso} from '@/lib/schedule/static-day';
 import {DEFAULT_HALL_ID} from '@/lib/schedule/slot-rules';
 import {Session} from '@/lib/types/session';
@@ -27,6 +27,7 @@ type SessionPoolContextValue = {
   addSession: (payload: NewSessionInput) => Session | null;
   updateSession: (sessionId: string, payload: Partial<NewSessionInput>) => Session | null;
   removeSession: (sessionId: string) => void;
+  refreshSessions: () => Promise<{ok: true; sessions: Session[]} | {ok: false; error: string; status?: number}>;
   replaceSessions: (next: Session[]) => Promise<{ok: true; sessions: Session[]} | {ok: false; error: string; status?: number}>;
   resetSessions: () => Promise<{ok: true} | {ok: false; error: string; status?: number}>;
 };
@@ -89,33 +90,38 @@ async function parseApiError(response: Response, fallback: string) {
 export function SessionPoolProvider({children}: {children: React.ReactNode}) {
   const [sessionPool, setSessionPool] = useState<Session[]>([]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const response = await fetch('/api/sessions', {cache: 'no-store'});
-        if (!response.ok) {
-          const details = await response.text().catch(() => '');
-          console.error(
-            `Unable to load sessions from DB API. HTTP ${response.status}${details ? `: ${details}` : ''}`
-          );
-          if (!cancelled) setSessionPool([]);
-          return;
-        }
-        const parsed = (await response.json()) as Session[];
-        if (!cancelled && isSessionArray(parsed)) {
-          setSessionPool(sortSessions(parsed.map((item) => normalizeSession(item))));
-        }
-      } catch (error) {
-        console.error('Unable to load sessions from DB API.', error);
-        if (!cancelled) setSessionPool([]);
+  const refreshSessions = useCallback(async () => {
+    try {
+      const response = await fetch('/api/sessions', {cache: 'no-store'});
+      if (!response.ok) {
+        const details = await response.text().catch(() => '');
+        const errorMessage = `Unable to load sessions from DB API. HTTP ${response.status}${details ? `: ${details}` : ''}`;
+        console.error(errorMessage);
+        setSessionPool([]);
+        return {ok: false as const, error: errorMessage, status: response.status};
       }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
+      const parsed = (await response.json()) as Session[];
+      if (!isSessionArray(parsed)) {
+        setSessionPool([]);
+        return {ok: false as const, error: 'Invalid sessions payload.'};
+      }
+
+      const next = sortSessions(parsed.map((item) => normalizeSession(item)));
+      setSessionPool(next);
+      return {ok: true as const, sessions: next};
+    } catch (error) {
+      console.error('Unable to load sessions from DB API.', error);
+      setSessionPool([]);
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : 'Unable to load schedule.'
+      };
+    }
   }, []);
+
+  useEffect(() => {
+    void refreshSessions();
+  }, [refreshSessions]);
 
   const value = useMemo<SessionPoolContextValue>(
     () => ({
@@ -196,6 +202,7 @@ export function SessionPoolProvider({children}: {children: React.ReactNode}) {
           console.error('Unable to persist session deletion to DB.', error);
         });
       },
+      refreshSessions,
       replaceSessions: async (next) => {
         const previous = sessionPool;
         const normalized = sortSessions(next.map((item) => normalizeSession(item)));
@@ -259,7 +266,7 @@ export function SessionPoolProvider({children}: {children: React.ReactNode}) {
         }
       }
     }),
-    [sessionPool]
+    [refreshSessions, sessionPool]
   );
 
   return <SessionPoolContext.Provider value={value}>{children}</SessionPoolContext.Provider>;

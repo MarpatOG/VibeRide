@@ -259,11 +259,12 @@ function getLocalDateIso(date: Date) {
 }
 
 export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
-  const {sessions, replaceSessions} = useSessionPool();
+  const {sessions, replaceSessions, refreshSessions} = useSessionPool();
   const {trainers} = useTrainerPool();
   const isRu = locale === 'ru';
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAppendingMockSchedule, setIsAppendingMockSchedule] = useState(false);
   const [baseSessions, setBaseSessions] = useState<Session[]>(() => sortSessions(sessions));
   const [draftSessions, setDraftSessions] = useState<Session[]>(() => sortSessions(sessions));
 
@@ -527,6 +528,67 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
     setMessage(isRu ? 'Изменения матрицы сохранены.' : 'Matrix changes saved.');
   };
 
+  const onAppendMockSchedule = async () => {
+    if (isAppendingMockSchedule) return;
+    setError(null);
+    setMessage(null);
+
+    if (isDirty) {
+      setError(
+        isRu
+          ? 'Сначала сохраните или отмените изменения матрицы, затем запустите отладочное заполнение.'
+          : 'Save or discard matrix changes first, then run debug schedule append.'
+      );
+      return;
+    }
+
+    setIsAppendingMockSchedule(true);
+    try {
+      const response = await fetch('/api/sessions/debug/mock', {method: 'POST'});
+      const payload = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        reason?: string;
+        message?: string;
+        addedDays?: number;
+        addedSessions?: number;
+        range?: {startDate?: string; endDate?: string};
+      };
+
+      if (!response.ok || !payload.ok) {
+        const details = payload.message || payload.reason || `HTTP ${response.status}`;
+        setError(isRu ? `Не удалось добавить мок-расписание: ${details}` : `Unable to append mock schedule: ${details}`);
+        return;
+      }
+
+      const refreshResult = await refreshSessions();
+      if (!refreshResult.ok) {
+        setError(
+          isRu
+            ? `Мок-расписание добавлено, но матрицу не удалось обновить: ${refreshResult.error}`
+            : `Mock schedule was appended, but matrix refresh failed: ${refreshResult.error}`
+        );
+        return;
+      }
+
+      const addedSessions = payload.addedSessions ?? 0;
+      const addedDays = payload.addedDays ?? 0;
+      const rangeStart = payload.range?.startDate ?? '';
+      const rangeEnd = payload.range?.endDate ?? '';
+      const rangePart = rangeStart && rangeEnd ? ` (${rangeStart} - ${rangeEnd})` : '';
+
+      setMessage(
+        isRu
+          ? `Добавлено ${addedSessions} тренировок на ${addedDays} дней${rangePart}.`
+          : `Added ${addedSessions} sessions for ${addedDays} days${rangePart}.`
+      );
+    } catch (err) {
+      const details = err instanceof Error ? err.message : 'Unknown error';
+      setError(isRu ? `Не удалось добавить мок-расписание: ${details}` : `Unable to append mock schedule: ${details}`);
+    } finally {
+      setIsAppendingMockSchedule(false);
+    }
+  };
+
   return (
     <div className="mt-6 grid max-w-full gap-6">
       <Card className="min-w-0 overflow-hidden p-5">
@@ -538,6 +600,19 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
                 ? `Сессий в окне 2 месяцев: ${visibleDraftSessions.length}`
                 : `Sessions in 2-month window: ${visibleDraftSessions.length}`}
             </div>
+            <Button
+              onClick={onAppendMockSchedule}
+              disabled={isAppendingMockSchedule || isDirty}
+              className="h-9 px-4 text-sm"
+            >
+              {isAppendingMockSchedule
+                ? isRu
+                  ? 'Добавляем...'
+                  : 'Appending...'
+                : isRu
+                  ? 'Отладка: добавление мок-расписания'
+                  : 'Debug: append mock schedule'}
+            </Button>
             <Button onClick={onSaveMatrix} disabled={!isDirty} className="h-9 px-4 text-sm">
               {isRu ? 'Сохранить' : 'Save'}
             </Button>
