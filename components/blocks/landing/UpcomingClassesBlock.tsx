@@ -16,13 +16,6 @@ import {getTrainerShortName} from '@/lib/utils/trainer';
 const PAST_STATUS_REFRESH_MS = 30_000;
 const SCHEDULE_DESCRIPTION_MAX_CHARS = 72;
 const UPCOMING_ITEMS_LIMIT = 12;
-const SWIPE_CARD_STEP_THRESHOLD_PX = 14;
-const SWIPE_ANIMATION_DURATION_MS = 280;
-
-function easeInOutCubic(progress: number) {
-  if (progress < 0.5) return 4 * progress * progress * progress;
-  return 1 - ((-2 * progress + 2) ** 3) / 2;
-}
 
 function formatSessionDayLabel(dateKey: string, locale: Locale) {
   const date = new Date(`${dateKey}T00:00:00Z`);
@@ -83,9 +76,6 @@ export default function UpcomingClassesBlock({
   const {isBooked} = useClientBookings();
   const topScrollerRef = useRef<HTMLDivElement | null>(null);
   const contentScrollerRef = useRef<HTMLDivElement | null>(null);
-  const swipeStartRef = useRef<{x: number; y: number} | null>(null);
-  const swipeAnimationFrameRef = useRef<number | null>(null);
-  const cardStepRef = useRef(0);
   const [topTrackWidth, setTopTrackWidth] = useState(0);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
   const ctaLabel = ctaAllLabel.replace(/\s*[→>-]+\s*$/, '').trim();
@@ -143,10 +133,6 @@ export default function UpcomingClassesBlock({
 
     const updateTrackWidth = () => {
       setTopTrackWidth(contentScroller.scrollWidth);
-      const card = contentScroller.querySelector<HTMLElement>('[data-upcoming-card="true"]');
-      const row = contentScroller.firstElementChild as HTMLElement | null;
-      const gap = row ? Number.parseFloat(getComputedStyle(row).columnGap || '0') : 0;
-      cardStepRef.current = card ? card.offsetWidth + (Number.isFinite(gap) ? gap : 0) : 0;
     };
 
     const syncTopFromContent = () => {
@@ -178,82 +164,6 @@ export default function UpcomingClassesBlock({
       resizeObserver.disconnect();
     };
   }, [items.length]);
-
-  useEffect(() => {
-    return () => {
-      if (swipeAnimationFrameRef.current !== null) {
-        cancelAnimationFrame(swipeAnimationFrameRef.current);
-        swipeAnimationFrameRef.current = null;
-      }
-    };
-  }, []);
-
-  const stopSwipeAnimation = () => {
-    if (swipeAnimationFrameRef.current !== null) {
-      cancelAnimationFrame(swipeAnimationFrameRef.current);
-      swipeAnimationFrameRef.current = null;
-    }
-  };
-
-  const animateSwipeTo = (element: HTMLDivElement, targetLeft: number) => {
-    const startLeft = element.scrollLeft;
-    if (Math.abs(targetLeft - startLeft) < 1) {
-      element.scrollLeft = targetLeft;
-      return;
-    }
-
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) {
-      element.scrollLeft = targetLeft;
-      return;
-    }
-
-    stopSwipeAnimation();
-    const startedAt = performance.now();
-
-    const tick = (now: number) => {
-      const elapsed = now - startedAt;
-      const progress = Math.min(1, elapsed / SWIPE_ANIMATION_DURATION_MS);
-      const eased = easeInOutCubic(progress);
-      element.scrollLeft = startLeft + (targetLeft - startLeft) * eased;
-      if (progress < 1) {
-        swipeAnimationFrameRef.current = requestAnimationFrame(tick);
-      } else {
-        swipeAnimationFrameRef.current = null;
-      }
-    };
-
-    swipeAnimationFrameRef.current = requestAnimationFrame(tick);
-  };
-
-  const onContentTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
-    stopSwipeAnimation();
-    const point = event.touches[0];
-    if (!point) return;
-    swipeStartRef.current = {x: point.clientX, y: point.clientY};
-  };
-
-  const onContentTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
-    const point = event.changedTouches[0];
-    const start = swipeStartRef.current;
-    swipeStartRef.current = null;
-    if (!point || !start) return;
-
-    const deltaX = point.clientX - start.x;
-    const deltaY = point.clientY - start.y;
-    if (Math.abs(deltaX) < SWIPE_CARD_STEP_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) return;
-
-    const contentScroller = contentScrollerRef.current;
-    if (!contentScroller) return;
-
-    const step = cardStepRef.current || Math.round(contentScroller.clientWidth * 0.86);
-    const direction = deltaX < 0 ? 1 : -1;
-    const maxLeft = Math.max(0, contentScroller.scrollWidth - contentScroller.clientWidth);
-    const currentIndex = Math.round(contentScroller.scrollLeft / step);
-    const nextIndex = Math.max(0, Math.min(Math.ceil(maxLeft / step), currentIndex + direction));
-    const nextLeft = Math.max(0, Math.min(maxLeft, nextIndex * step));
-    animateSwipeTo(contentScroller, nextLeft);
-  };
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -324,13 +234,8 @@ export default function UpcomingClassesBlock({
           </div>
           <div
             ref={contentScrollerRef}
-            className="overflow-x-auto bg-transparent pb-4 scrollbar-hidden snap-x snap-mandatory touch-pan-x overscroll-x-contain sm:snap-none"
-            onTouchStart={onContentTouchStart}
-            onTouchEnd={onContentTouchEnd}
-            onTouchCancel={() => {
-              swipeStartRef.current = null;
-            }}
-            style={{touchAction: 'pan-x'}}
+            className="overflow-x-auto bg-transparent pb-4 scrollbar-hidden snap-x snap-proximity touch-auto overscroll-x-contain sm:snap-none"
+            style={{WebkitOverflowScrolling: 'touch'}}
           >
             <div className="flex gap-5 bg-transparent py-1 pl-0 pr-1 sm:px-1">
             {items.map((session) => {
