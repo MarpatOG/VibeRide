@@ -157,6 +157,23 @@ section {
   margin: 0 auto;
 }
 
+.container-schedule {
+  width: min(1200px, 100% - 2rem);
+  margin: 0 auto;
+}
+
+@media (min-width: 1536px) {
+  .container-schedule {
+    width: min(1600px, 100% - 3rem);
+  }
+}
+
+@media (min-width: 1920px) {
+  .container-schedule {
+    width: min(1800px, 100% - 4rem);
+  }
+}
+
 .container-narrow {
   width: min(880px, 100% - 2rem);
   margin: 0 auto;

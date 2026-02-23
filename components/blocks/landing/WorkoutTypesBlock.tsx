@@ -95,7 +95,7 @@ export default function WorkoutTypesBlock({
   const activeContent = activeTypeId ? WORKOUT_TYPE_POPUP_CONTENT_RU[activeTypeId] : null;
 
   return (
-    <section className="container-wide py-6 md:py-7">
+    <section className="container-schedule py-6 md:py-7">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="text-xl font-semibold md:text-2xl">{title}</h2>
         <p className="mt-1 text-sm leading-tight text-text-muted md:text-base">{subtitle}</p>

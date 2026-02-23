@@ -21,6 +21,7 @@ import {getTrainerFullName} from '@/lib/utils/trainer';
 import {CANCEL_WINDOW_MINUTES_BEFORE_START} from '@/lib/constants/booking';
 
 type SaveState = 'idle' | 'saving' | 'success' | 'error';
+const EMPTY_PROFILE: UserProfile = {firstName: '', lastName: '', email: ''};
 
 function buildFreeCancelUntilIso(startsAt: string) {
   const startMs = new Date(startsAt).getTime();
@@ -41,16 +42,9 @@ export default function ProfileDashboardPage() {
     validUntil: undefined,
     active: false
   });
-  const [profile, setProfile] = useState<UserProfile>({
-    firstName: 'Demo',
-    lastName: 'Client',
-    email: 'client@viberide.demo'
-  });
-  const [profileDraft, setProfileDraft] = useState<UserProfile>({
-    firstName: 'Demo',
-    lastName: 'Client',
-    email: 'client@viberide.demo'
-  });
+  const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE);
+  const [profileDraft, setProfileDraft] = useState<UserProfile>(EMPTY_PROFILE);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [isProfileEditing, setIsProfileEditing] = useState(false);
   const [profileSaveState, setProfileSaveState] = useState<SaveState>('idle');
   const [profileErrorMessage, setProfileErrorMessage] = useState('');
@@ -68,6 +62,10 @@ export default function ProfileDashboardPage() {
         setMembership(payload.membership);
       } catch (error) {
         console.error('Unable to load profile from DB API.', error);
+      } finally {
+        if (!cancelled) {
+          setIsProfileLoading(false);
+        }
       }
     };
     void load();
@@ -140,6 +138,7 @@ export default function ProfileDashboardPage() {
 
   const startProfileEdit = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
+    if (isProfileLoading) return;
     setProfileDraft(profile);
     setIsProfileEditing(true);
     setProfileSaveState('idle');
@@ -242,8 +241,17 @@ export default function ProfileDashboardPage() {
                 </div>
               ) : (
                 <>
-                  <div className="truncate text-base font-semibold">{fullName}</div>
-                  <div className="truncate text-sm text-text-muted">{profile.email}</div>
+                  {isProfileLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-4 w-40 rounded bg-bg-tertiary" />
+                      <div className="h-3 w-52 rounded bg-bg-tertiary" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="truncate text-base font-semibold">{fullName}</div>
+                      <div className="truncate text-sm text-text-muted">{profile.email}</div>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -266,8 +274,14 @@ export default function ProfileDashboardPage() {
                 </Button>
               </>
             ) : (
-              <Button type="button" variant="secondary" onClick={startProfileEdit}>
-                {locale === 'ru' ? 'Изменить данные' : 'Edit details'}
+              <Button type="button" variant="secondary" onClick={startProfileEdit} disabled={isProfileLoading}>
+                {isProfileLoading
+                  ? locale === 'ru'
+                    ? 'Загрузка...'
+                    : 'Loading...'
+                  : locale === 'ru'
+                    ? 'Изменить данные'
+                    : 'Edit details'}
               </Button>
             )}
           </div>

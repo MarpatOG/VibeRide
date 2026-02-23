@@ -62,7 +62,12 @@ function formatDayLabel(dateKey: string, locale: Locale) {
 function formatWeekLabel(startIso: string, endIso: string, weekNumber: number, locale: Locale) {
   const startLabel = locale === 'ru' ? `${startIso.slice(8, 10)}.${startIso.slice(5, 7)}` : `${startIso.slice(5, 7)}/${startIso.slice(8, 10)}`;
   const endLabel = locale === 'ru' ? `${endIso.slice(8, 10)}.${endIso.slice(5, 7)}` : `${endIso.slice(5, 7)}/${endIso.slice(8, 10)}`;
-  return locale === 'ru' ? `Нед ${weekNumber} · ${startLabel}-${endLabel}` : `Week ${weekNumber} · ${startLabel}-${endLabel}`;
+  if (locale === 'ru') {
+    const prefix = weekNumber === 1 ? 'Текущая неделя' : weekNumber === 2 ? 'Следующая неделя' : `Неделя ${weekNumber}`;
+    return `${prefix} · ${startLabel}-${endLabel}`;
+  }
+  const prefix = weekNumber === 1 ? 'Current week' : weekNumber === 2 ? 'Next week' : `Week ${weekNumber}`;
+  return `${prefix} · ${startLabel}-${endLabel}`;
 }
 
 function addDaysToIso(dateIso: string, days: number) {
@@ -265,7 +270,7 @@ export default function SessionListBlock({
 
   if (days.length === 0) {
     return (
-      <section className="container-wide pt-2">
+      <section className="container-schedule pt-2">
         <Card>
           <h3>{emptyTitle}</h3>
           <Link href={emptyCtaHref} locale={locale} className="text-sm font-semibold text-[var(--accent)]">
@@ -277,7 +282,7 @@ export default function SessionListBlock({
   }
 
   return (
-    <section className="container-wide pt-0">
+    <section className="container-schedule pt-0">
       <div className="mb-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hidden">
         {weekRanges.map((range, index) => {
           const active = range.startIndex === activeWeekStartIndex;

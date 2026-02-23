@@ -180,7 +180,12 @@ function formatDayLabel(dateIso: string, locale: Locale) {
 function formatWeekRangeLabel(startIso: string, endIso: string, weekNumber: number, locale: Locale) {
   const startLabel = locale === 'ru' ? `${startIso.slice(8, 10)}.${startIso.slice(5, 7)}` : `${startIso.slice(5, 7)}/${startIso.slice(8, 10)}`;
   const endLabel = locale === 'ru' ? `${endIso.slice(8, 10)}.${endIso.slice(5, 7)}` : `${endIso.slice(5, 7)}/${endIso.slice(8, 10)}`;
-  return locale === 'ru' ? `Нед ${weekNumber} · ${startLabel}-${endLabel}` : `Week ${weekNumber} · ${startLabel}-${endLabel}`;
+  if (locale === 'ru') {
+    const prefix = weekNumber === 1 ? 'Текущая неделя' : weekNumber === 2 ? 'Следующая неделя' : `Неделя ${weekNumber}`;
+    return `${prefix} · ${startLabel}-${endLabel}`;
+  }
+  const prefix = weekNumber === 1 ? 'Current week' : weekNumber === 2 ? 'Next week' : `Week ${weekNumber}`;
+  return `${prefix} · ${startLabel}-${endLabel}`;
 }
 
 function formatSlotIssue(issue: SlotValidationIssue, locale: Locale) {

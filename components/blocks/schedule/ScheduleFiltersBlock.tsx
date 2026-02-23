@@ -71,18 +71,6 @@ export default function ScheduleFiltersBlock({
     [sessions, todayIso]
   );
 
-  const activeCount = useMemo(
-    () =>
-      availableSessions.filter((session) =>
-        matchesFilters(session, {
-          trainerId: trainerFilter,
-          difficulty: difficultyFilter,
-          trainingType: trainingTypeFilter
-        })
-      ).length,
-    [availableSessions, trainerFilter, difficultyFilter, trainingTypeFilter]
-  );
-
   const levelCounts = useMemo(() => {
     return {
       any: availableSessions.filter((session) => matchesFilters(session, {trainerId: trainerFilter, difficulty: '', trainingType: trainingTypeFilter})).length,
@@ -142,14 +130,8 @@ export default function ScheduleFiltersBlock({
     return map;
   }, [availableSessions, trainers, difficultyFilter, trainingTypeFilter]);
 
-  const filterSummaryText =
-    locale === 'ru'
-      ? `Останется тренировок: ${activeCount}`
-      : `Sessions after filters: ${activeCount}`;
-
   const FiltersContent = () => (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-3">
+    <div className="flex flex-wrap items-end gap-3">
         {showLevelFilter && (
           <div className="flex min-w-[220px] flex-1 flex-col gap-1">
             <span className="text-[11px] font-semibold tracking-[0.08em] uppercase text-text-muted">
@@ -221,16 +203,11 @@ export default function ScheduleFiltersBlock({
             </select>
           </div>
         )}
-      </div>
-
-      <div className="rounded-lg border border-border/70 bg-bg-tertiary/60 px-3 py-2 text-sm font-medium text-text">
-        {filterSummaryText}
-      </div>
     </div>
   );
 
   return (
-    <section className="container-wide py-5 md:py-7">
+    <section className="container-schedule py-5 md:py-7">
       <div className="rounded-2xl border border-border/80 bg-bg-elevated p-3 shadow-sm md:p-4">
         <div className="hidden md:block">
           <FiltersContent />
@@ -240,9 +217,6 @@ export default function ScheduleFiltersBlock({
           <Button variant="secondary" onClick={() => setOpen(true)} className="w-full">
             {locale === 'ru' ? 'Фильтры' : 'Filters'}
           </Button>
-          <div className="mt-2 rounded-lg border border-border/70 bg-bg-tertiary/60 px-3 py-2 text-sm font-medium text-text">
-            {filterSummaryText}
-          </div>
         </div>
 
         <Drawer open={open} onClose={() => setOpen(false)} title={locale === 'ru' ? 'Фильтры' : 'Filters'}>
