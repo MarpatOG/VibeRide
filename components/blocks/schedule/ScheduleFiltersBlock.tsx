@@ -19,6 +19,8 @@ import {Session} from '@/lib/types/session';
 import {getTrainerFullName} from '@/lib/utils/trainer';
 
 type IntensityFilter = '' | `${IntensityValue}`;
+const DAYS_IN_WEEK = 7;
+const VISIBLE_WEEKS = 2;
 
 type Filters = {
   trainerId: string;
@@ -35,6 +37,18 @@ function getLocalDateIso(date: Date) {
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
   const day = `${date.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function addDaysToIso(dateIso: string, days: number) {
+  const [year, month, day] = dateIso.split('-').map(Number);
+  const value = new Date(Date.UTC(year, (month || 1) - 1, (day || 1) + days));
+  return value.toISOString().slice(0, 10);
+}
+
+function getStartOfWeekIso(dateIso: string) {
+  const date = new Date(`${dateIso}T00:00:00Z`);
+  const weekDay = date.getUTCDay() || 7;
+  return addDaysToIso(dateIso, -(weekDay - 1));
 }
 
 function matchesFilters(session: Session, filters: Filters) {
@@ -68,15 +82,17 @@ export default function ScheduleFiltersBlock({
   const [open, setOpen] = useState(false);
 
   const todayIso = useMemo(() => getLocalDateIso(new Date()), []);
+  const nextWeekEndIso = useMemo(() => addDaysToIso(getStartOfWeekIso(todayIso), DAYS_IN_WEEK * VISIBLE_WEEKS - 1), [todayIso]);
   const availableSessions = useMemo(
     () =>
       sessions.filter(
         (session) =>
           !session.trainerDetached &&
           Boolean(session.trainerId) &&
-          getDateKey(session.startsAt) >= todayIso
+          getDateKey(session.startsAt) >= todayIso &&
+          getDateKey(session.startsAt) <= nextWeekEndIso
       ),
-    [sessions, todayIso]
+    [sessions, todayIso, nextWeekEndIso]
   );
 
   const intensityCounts = useMemo(() => {

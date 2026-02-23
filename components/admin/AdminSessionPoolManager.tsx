@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import {CSSProperties, useEffect, useMemo, useState} from 'react';
+import {CSSProperties, useCallback, useEffect, useMemo, useState, useTransition} from 'react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import IntensityScale, {getIntensityBySession, getIntensityColorBySession, getIntensityLabel} from '@/components/ui/IntensityScale';
@@ -264,6 +264,7 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
   const isRu = locale === 'ru';
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isPendingWeekSwitch, startWeekSwitchTransition] = useTransition();
   const [isAppendingMockSchedule, setIsAppendingMockSchedule] = useState(false);
   const [baseSessions, setBaseSessions] = useState<Session[]>(() => sortSessions(sessions));
   const [draftSessions, setDraftSessions] = useState<Session[]>(() => sortSessions(sessions));
@@ -333,6 +334,15 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
   }, [dayNumbers.length, baseDateIso]);
 
   const [activeWeekStartDay, setActiveWeekStartDay] = useState(1);
+  const handleWeekClick = useCallback(
+    (startDay: number) => {
+      if (startDay === activeWeekStartDay || isPendingWeekSwitch) return;
+      startWeekSwitchTransition(() => {
+        setActiveWeekStartDay(startDay);
+      });
+    },
+    [activeWeekStartDay, isPendingWeekSwitch, startWeekSwitchTransition]
+  );
 
   useEffect(() => {
     if (weekRanges.length === 0) {
@@ -641,7 +651,8 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
               <button
                 key={`${range.startDay}-${range.endDay}`}
                 type="button"
-                onClick={() => setActiveWeekStartDay(range.startDay)}
+                onClick={() => handleWeekClick(range.startDay)}
+                disabled={isPendingWeekSwitch}
                 className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                   isActive
                     ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'

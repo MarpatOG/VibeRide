@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import {CSSProperties, useEffect, useMemo, useRef, useState} from 'react';
+import {CSSProperties, useCallback, useEffect, useMemo, useRef, useState, useTransition} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {Link} from '@/lib/navigation';
 import {getWorkoutTypeBySessionTitle} from '@/lib/data/workout-types';
@@ -13,8 +13,8 @@ import {useTrainerPool} from '@/components/providers/TrainerPoolProvider';
 import {t} from '@/lib/utils/localized';
 import {getTrainerShortName} from '@/lib/utils/trainer';
 
-const MIN_SCHEDULE_DAYS = 10;
 const DAYS_IN_WEEK = 7;
+const VISIBLE_WEEKS = 2;
 const SCHEDULE_DESCRIPTION_MAX_CHARS = 72;
 const PAST_STATUS_REFRESH_MS = 30_000;
 
@@ -77,6 +77,12 @@ function addDaysToIso(dateIso: string, days: number) {
   return value.toISOString().slice(0, 10);
 }
 
+function getStartOfWeekIso(dateIso: string) {
+  const date = new Date(`${dateIso}T00:00:00Z`);
+  const weekDay = date.getUTCDay() || 7;
+  return addDaysToIso(dateIso, -(weekDay - 1));
+}
+
 function diffDaysIso(fromIso: string, toIso: string) {
   const [fromYear, fromMonth, fromDay] = fromIso.split('-').map(Number);
   const [toYear, toMonth, toDay] = toIso.split('-').map(Number);
@@ -118,19 +124,27 @@ export default function SessionListBlock({
   const contentScrollerRef = useRef<HTMLDivElement | null>(null);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
   const [topTrackWidth, setTopTrackWidth] = useState(0);
+  const [isPendingWeekSwitch, startWeekSwitchTransition] = useTransition();
   const searchParams = useSearchParams();
   const autoOpenedSessionRef = useRef<string | null>(null);
   const sessionIdFromQuery = searchParams.get('session');
   const todayIso = useMemo(() => getLocalDateIso(nowTimestamp), [nowTimestamp]);
+  const currentWeekStartIso = useMemo(() => getStartOfWeekIso(todayIso), [todayIso]);
+  const currentWeekEndIso = useMemo(() => addDaysToIso(currentWeekStartIso, DAYS_IN_WEEK - 1), [currentWeekStartIso]);
+  const nextWeekEndIso = useMemo(
+    () => addDaysToIso(currentWeekStartIso, DAYS_IN_WEEK * VISIBLE_WEEKS - 1),
+    [currentWeekStartIso]
+  );
   const clientSessions = useMemo(
     () =>
       sessions.filter(
         (session) =>
           !session.trainerDetached &&
           Boolean(session.trainerId) &&
-          getDateKey(session.startsAt) >= todayIso
+          getDateKey(session.startsAt) >= todayIso &&
+          getDateKey(session.startsAt) <= nextWeekEndIso
       ),
-    [sessions, todayIso]
+    [sessions, todayIso, nextWeekEndIso]
   );
 
   useEffect(() => {
@@ -160,34 +174,46 @@ export default function SessionListBlock({
 
   const days = useMemo(() => {
     if (clientSessions.length === 0) return [];
-    const uniqueSortedDates = Array.from(new Set(clientSessions.map((session) => getDateKey(session.startsAt)))).sort();
-    const firstDate = uniqueSortedDates[0];
-    const lastDate = uniqueSortedDates[uniqueSortedDates.length - 1];
-    const spanDays = diffDaysIso(firstDate, lastDate) + 1;
-    const totalDays = Math.max(MIN_SCHEDULE_DAYS, spanDays);
-    return Array.from({length: totalDays}, (_, index) => addDaysToIso(firstDate, index));
-  }, [clientSessions]);
+    const totalDays = diffDaysIso(todayIso, nextWeekEndIso) + 1;
+    return Array.from({length: totalDays}, (_, index) => addDaysToIso(todayIso, index));
+  }, [clientSessions.length, todayIso, nextWeekEndIso]);
 
   const byDay = useMemo(() => {
-    return days.map((day) =>
-      clientSessions
-        .filter((session) => getDateKey(session.startsAt) === day)
-        .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-    );
+    const sessionsByDate = new Map<string, typeof clientSessions>();
+    for (const session of clientSessions) {
+      const day = getDateKey(session.startsAt);
+      const existing = sessionsByDate.get(day);
+      if (existing) {
+        existing.push(session);
+      } else {
+        sessionsByDate.set(day, [session]);
+      }
+    }
+
+    return days.map((day) => [...(sessionsByDate.get(day) ?? [])].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
   }, [clientSessions, days]);
 
   const weekRanges = useMemo(() => {
-    return Array.from({length: Math.ceil(days.length / DAYS_IN_WEEK)}, (_, index) => {
-      const startIndex = index * DAYS_IN_WEEK;
-      const endIndex = Math.min(days.length - 1, startIndex + DAYS_IN_WEEK - 1);
-      return {
-        startIndex,
-        endIndex,
-        startIso: days[startIndex],
-        endIso: days[endIndex]
-      };
-    });
-  }, [days]);
+    if (days.length === 0) return [];
+    const currentWeekLastIndex = Math.min(days.length - 1, diffDaysIso(todayIso, currentWeekEndIso));
+    const ranges = [
+      {
+        startIndex: 0,
+        endIndex: currentWeekLastIndex,
+        startIso: days[0],
+        endIso: days[currentWeekLastIndex]
+      }
+    ];
+    if (currentWeekLastIndex + 1 <= days.length - 1) {
+      ranges.push({
+        startIndex: currentWeekLastIndex + 1,
+        endIndex: days.length - 1,
+        startIso: days[currentWeekLastIndex + 1],
+        endIso: days[days.length - 1]
+      });
+    }
+    return ranges;
+  }, [days, todayIso, currentWeekEndIso]);
 
   const [activeWeekStartIndex, setActiveWeekStartIndex] = useState(0);
 
@@ -207,9 +233,11 @@ export default function SessionListBlock({
     const selectedDay = getDateKey(selected.startsAt);
     const targetWeek = weekRanges.find((range) => selectedDay >= range.startIso && selectedDay <= range.endIso);
     if (targetWeek && targetWeek.startIndex !== activeWeekStartIndex) {
-      setActiveWeekStartIndex(targetWeek.startIndex);
+      startWeekSwitchTransition(() => {
+        setActiveWeekStartIndex(targetWeek.startIndex);
+      });
     }
-  }, [selected, weekRanges, activeWeekStartIndex]);
+  }, [selected, weekRanges, activeWeekStartIndex, startWeekSwitchTransition]);
 
   const visibleDays = useMemo(
     () => days.slice(activeWeekStartIndex, activeWeekStartIndex + DAYS_IN_WEEK),
@@ -219,6 +247,18 @@ export default function SessionListBlock({
   const visibleByDay = useMemo(
     () => byDay.slice(activeWeekStartIndex, activeWeekStartIndex + DAYS_IN_WEEK),
     [byDay, activeWeekStartIndex]
+  );
+  const trainerById = useMemo(() => {
+    return new Map(trainers.map((trainer) => [trainer.id, trainer] as const));
+  }, [trainers]);
+  const handleWeekClick = useCallback(
+    (startIndex: number) => {
+      if (startIndex === activeWeekStartIndex || isPendingWeekSwitch) return;
+      startWeekSwitchTransition(() => {
+        setActiveWeekStartIndex(startIndex);
+      });
+    },
+    [activeWeekStartIndex, isPendingWeekSwitch, startWeekSwitchTransition]
   );
 
   const gridStyle = {
@@ -267,7 +307,7 @@ export default function SessionListBlock({
       window.removeEventListener('resize', updateTrackWidth);
       resizeObserver.disconnect();
     };
-  }, [visibleDays.length, activeWeekStartIndex]);
+  }, [visibleDays.length]);
 
   if (days.length === 0) {
     return (
@@ -291,7 +331,8 @@ export default function SessionListBlock({
             <button
               key={`${range.startIso}-${range.endIso}`}
               type="button"
-              onClick={() => setActiveWeekStartIndex(range.startIndex)}
+              onClick={() => handleWeekClick(range.startIndex)}
+              disabled={isPendingWeekSwitch}
               className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                 active
                   ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
@@ -346,7 +387,7 @@ export default function SessionListBlock({
                 }`}
               >
                 {daySessions.map((session) => {
-                  const trainer = trainers.find((item) => item.id === session.trainerId);
+                  const trainer = trainerById.get(session.trainerId);
                   const isPast = isPastSession(session.startsAt, session.durationMin, nowTimestamp);
                   const available = !isPast && session.bookedCount < session.capacity;
                   const isSelected = selected?.id === session.id;
