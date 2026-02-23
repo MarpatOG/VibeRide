@@ -67,6 +67,7 @@ model Trainer {
   bioRu     String
   bioEn     String
   sessions  Session[]
+  mockScheduleRows MockScheduleTemplateRow[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -135,4 +136,35 @@ model HistoryEvent {
   createdAt  DateTime         @default(now())
 
   @@index([userId, occurredAt])
+}
+
+model MockScheduleTemplate {
+  id             String                    @id @default(cuid())
+  code           String                    @unique
+  name           String
+  timezoneOffset String                    @default("+03:00")
+  capacity       Int                       @default(20)
+  rows           MockScheduleTemplateRow[]
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+}
+
+model MockScheduleTemplateRow {
+  id                 String               @id @default(cuid())
+  templateId         String
+  day                Int
+  slotStart          String
+  durationMin        Int
+  scheduleTemplateId String
+  trainerId          String
+  descriptionRu      String
+  descriptionEn      String
+  isThematic         Boolean              @default(false)
+  template           MockScheduleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  trainer            Trainer              @relation(fields: [trainerId], references: [id], onDelete: Restrict)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@unique([templateId, day, slotStart])
+  @@index([templateId, day, slotStart])
 }

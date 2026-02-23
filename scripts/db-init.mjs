@@ -31,6 +31,7 @@ async function main() {
   runOrThrow('npx prisma db push --skip-generate', 'Failed to sync Prisma schema to database.');
   runOrThrow('npx prisma generate', 'Failed to generate Prisma client.');
   runOrThrow('npm run db:seed', 'Failed to seed local database.');
+  runOrThrow('npm run db:seed:mock-template', 'Failed to import mock template from CSV.');
 }
 
 main().catch((error) => {

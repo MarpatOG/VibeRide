@@ -9,6 +9,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:cloud:users": "tsx scripts/seed-cloud-demo-users.ts",
     "db:seed:schedule:csv": "tsx scripts/seed-schedule-from-csv.ts",
+    "db:seed:mock-template": "tsx scripts/seed-mock-template-from-csv.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push --skip-generate",
     "postinstall": "prisma generate",
