@@ -4,6 +4,7 @@ import {resolve} from 'node:path';
 import {type ScheduleTemplate} from '../lib/schedule/generator';
 import {DEFAULT_HALL_ID} from '../lib/schedule/slot-rules';
 import {WORKOUT_TYPES} from '../lib/data/workout-types';
+import {hashPassword} from '../lib/server/password';
 
 const prisma = new PrismaClient();
 const CSV_PATH = 'mockschedule.csv';
@@ -373,9 +374,33 @@ async function main() {
 
   await prisma.user.createMany({
     data: [
-      {id: 'u-admin', email: 'admin@viberide.demo', name: 'Demo', lastName: 'Admin', role: 'admin', locale: 'ru'},
-      {id: 'u-trainer', email: 'trainer@viberide.demo', name: 'Demo', lastName: 'Trainer', role: 'trainer', locale: 'ru'},
-      {id: 'u-client', email: 'oleg@viberide.demo', name: 'Oleg', lastName: 'Sokolov', role: 'client', locale: 'ru'}
+      {
+        id: 'u-admin',
+        email: 'admin@viberide.local',
+        name: 'Demo',
+        lastName: 'Admin',
+        passwordHash: hashPassword('Admin123!'),
+        role: 'admin',
+        locale: 'ru'
+      },
+      {
+        id: 'u-trainer',
+        email: 'trainer@viberide.local',
+        name: 'Demo',
+        lastName: 'Trainer',
+        passwordHash: hashPassword('Trainer123!'),
+        role: 'trainer',
+        locale: 'ru'
+      },
+      {
+        id: 'u-client',
+        email: 'client@viberide.local',
+        name: 'Demo',
+        lastName: 'Client',
+        passwordHash: hashPassword('Client123!'),
+        role: 'client',
+        locale: 'ru'
+      }
     ]
   });
 

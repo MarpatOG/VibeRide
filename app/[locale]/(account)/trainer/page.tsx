@@ -1,6 +1,9 @@
-﻿import Card from '@/components/ui/Card';
+﻿import {redirect} from 'next/navigation';
+import {getServerSession} from 'next-auth';
+import Card from '@/components/ui/Card';
 import {db} from '@/lib/db';
 import {Locale} from '@/lib/locale';
+import {authOptions} from '@/lib/auth-options';
 import TrainerScheduleMatrix from '@/components/blocks/trainer/TrainerScheduleMatrix';
 
 const TARGET_TRAINER_ID = 't-arseny';
@@ -10,6 +13,14 @@ function getDateKey(startsAt: string) {
 }
 
 export default async function TrainerPage({params}: {params: Promise<{locale: Locale}>}) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    redirect('/login');
+  }
+  if (session.user.role !== 'trainer' && session.user.role !== 'admin') {
+    redirect('/profile');
+  }
+
   const {locale} = await params;
   const isRu = locale === 'ru';
 

@@ -1,6 +1,7 @@
 'use client';
 
 import {useMemo, useState} from 'react';
+import {useSession} from 'next-auth/react';
 import {products} from '@/lib/constants/catalog';
 import {t} from '@/lib/utils/localized';
 import {Locale} from '@/lib/locale';
@@ -8,8 +9,6 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import {useToast} from '@/components/ui/Toast';
-
-const DEMO_USER_ID = 'u-client';
 
 type PurchaseState = 'idle' | 'processing' | 'success' | 'error';
 
@@ -27,6 +26,7 @@ export default function ProductGridBlock({
   const [purchaseState, setPurchaseState] = useState<PurchaseState>('idle');
   const [purchaseError, setPurchaseError] = useState('');
   const [remainingSessions, setRemainingSessions] = useState<number | null>(null);
+  const {status: authStatus} = useSession();
   const {addToast} = useToast();
   const selectedProduct = useMemo(
     () => list.find((product) => product.id === selectedProductId) ?? null,
@@ -50,6 +50,9 @@ export default function ProductGridBlock({
     ? '\u0418\u043C\u0438\u0442\u0438\u0440\u0443\u0435\u043C \u043E\u043F\u043B\u0430\u0442\u0443...'
     : 'Processing stub payment...';
   const closeLabel = isRu ? '\u0417\u0430\u043A\u0440\u044B\u0442\u044C' : 'Close';
+  const authRequiredText = isRu
+    ? 'Для покупки нужно войти в аккаунт.'
+    : 'Please sign in to complete purchase.';
   const creditsLabel = (credits: number) => {
     if (!isRu) return `${credits} credits`;
 
@@ -78,16 +81,28 @@ export default function ProductGridBlock({
     setPurchaseError('');
     setRemainingSessions(null);
 
+    if (authStatus !== 'authenticated') {
+      setPurchaseState('error');
+      setPurchaseError(authRequiredText);
+      return;
+    }
+
     try {
       const response = await fetch('/api/purchases', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({productId, userId: DEMO_USER_ID})
+        body: JSON.stringify({productId})
       });
 
       const payload = (await response.json().catch(() => null)) as
         | {ok?: boolean; reason?: string; remainingSessions?: number}
         | null;
+
+      if (response.status === 401 || payload?.reason === 'unauthorized') {
+        setPurchaseState('error');
+        setPurchaseError(authRequiredText);
+        return;
+      }
 
       if (!response.ok || payload?.ok === false) {
         setPurchaseState('error');

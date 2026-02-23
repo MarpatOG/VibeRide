@@ -23,7 +23,8 @@ import {
 
 const DEFAULT_CAPACITY = 20;
 const EMPTY_SESSION_DURATION_MIN = 60;
-const MIN_ADMIN_DAYS = 10;
+const ADMIN_VISIBLE_DAYS = 60;
+const DAYS_IN_WEEK = 7;
 const MATRIX_COLUMN_MIN_WIDTH = 300;
 const MATRIX_GAP_PX = 12;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -176,6 +177,12 @@ function formatDayLabel(dateIso: string, locale: Locale) {
   }).format(toUtcDateFromIso(dateIso));
 }
 
+function formatWeekRangeLabel(startIso: string, endIso: string, weekNumber: number, locale: Locale) {
+  const startLabel = locale === 'ru' ? `${startIso.slice(8, 10)}.${startIso.slice(5, 7)}` : `${startIso.slice(5, 7)}/${startIso.slice(8, 10)}`;
+  const endLabel = locale === 'ru' ? `${endIso.slice(8, 10)}.${endIso.slice(5, 7)}` : `${endIso.slice(5, 7)}/${endIso.slice(8, 10)}`;
+  return locale === 'ru' ? `Нед ${weekNumber} · ${startLabel}-${endLabel}` : `Week ${weekNumber} · ${startLabel}-${endLabel}`;
+}
+
 function formatSlotIssue(issue: SlotValidationIssue, locale: Locale) {
   if (issue.type === 'invalid_duration') {
     return locale === 'ru'
@@ -272,24 +279,21 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
     [draftSessions, baseSessions]
   );
   const todayIso = useMemo(() => getLocalDateIso(new Date()), []);
+  const baseDateIso = todayIso;
+  const visibleEndIso = useMemo(() => addDaysToIso(baseDateIso, ADMIN_VISIBLE_DAYS - 1), [baseDateIso]);
+
   const visibleDraftSessions = useMemo(
-    () => draftSessions.filter((session) => getDateKey(session.startsAt) >= todayIso),
-    [draftSessions, todayIso]
+    () =>
+      draftSessions.filter((session) => {
+        const sessionDate = getDateKey(session.startsAt);
+        return sessionDate >= baseDateIso && sessionDate <= visibleEndIso;
+      }),
+    [draftSessions, baseDateIso, visibleEndIso]
   );
 
-  const baseDateIso = useMemo(() => {
-    const firstDate = sortSessions(visibleDraftSessions)[0]?.startsAt.slice(0, 10);
-    return firstDate ?? todayIso;
-  }, [todayIso, visibleDraftSessions]);
-
   const dayNumbers = useMemo(() => {
-    const maxDay = visibleDraftSessions.reduce(
-      (max, session) => Math.max(max, getRelativeDayNumber(getDateKey(session.startsAt), baseDateIso)),
-      1
-    );
-    const totalDays = Math.max(MIN_ADMIN_DAYS, maxDay);
-    return Array.from({length: totalDays}, (_, index) => index + 1);
-  }, [visibleDraftSessions, baseDateIso]);
+    return Array.from({length: ADMIN_VISIBLE_DAYS}, (_, index) => index + 1);
+  }, []);
 
   const sessionsByDay = useMemo(() => {
     const map = new Map<number, Session[]>();
@@ -309,13 +313,45 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
     return map;
   }, [dayNumbers, visibleDraftSessions, baseDateIso]);
 
+  const weekRanges = useMemo(() => {
+    return Array.from({length: Math.ceil(dayNumbers.length / DAYS_IN_WEEK)}, (_, index) => {
+      const startDay = index * DAYS_IN_WEEK + 1;
+      const endDay = Math.min(dayNumbers.length, startDay + DAYS_IN_WEEK - 1);
+      return {
+        startDay,
+        endDay,
+        startIso: addDaysToIso(baseDateIso, startDay - 1),
+        endIso: addDaysToIso(baseDateIso, endDay - 1)
+      };
+    });
+  }, [dayNumbers.length, baseDateIso]);
+
+  const [activeWeekStartDay, setActiveWeekStartDay] = useState(1);
+
+  useEffect(() => {
+    if (weekRanges.length === 0) {
+      if (activeWeekStartDay !== 1) setActiveWeekStartDay(1);
+      return;
+    }
+    const hasActiveWeek = weekRanges.some((range) => range.startDay === activeWeekStartDay);
+    if (!hasActiveWeek) {
+      setActiveWeekStartDay(weekRanges[0].startDay);
+    }
+  }, [weekRanges, activeWeekStartDay]);
+
+  const visibleDayNumbers = useMemo(() => {
+    const activeRange = weekRanges.find((range) => range.startDay === activeWeekStartDay) ?? weekRanges[0];
+    if (!activeRange) return [];
+    return Array.from({length: activeRange.endDay - activeRange.startDay + 1}, (_, index) => activeRange.startDay + index);
+  }, [weekRanges, activeWeekStartDay]);
+
   const matrixStyle = useMemo(
     () =>
       ({
-        gridTemplateColumns: `repeat(${dayNumbers.length}, ${MATRIX_COLUMN_MIN_WIDTH}px)`,
-        minWidth: `${dayNumbers.length * MATRIX_COLUMN_MIN_WIDTH + Math.max(0, dayNumbers.length - 1) * MATRIX_GAP_PX}px`
+        gridTemplateColumns: `repeat(${visibleDayNumbers.length}, ${MATRIX_COLUMN_MIN_WIDTH}px)`,
+        minWidth: `${visibleDayNumbers.length * MATRIX_COLUMN_MIN_WIDTH + Math.max(0, visibleDayNumbers.length - 1) * MATRIX_GAP_PX}px`
       }) as CSSProperties,
-    [dayNumbers.length]
+    [visibleDayNumbers.length]
   );
   const matrixScrollerStyle = useMemo(
     () =>
@@ -494,8 +530,8 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
           <div className="flex items-center gap-3">
             <div className="text-sm text-text-muted">
               {isRu
-                ? `Сессий в черновике: ${visibleDraftSessions.length}`
-                : `Draft sessions: ${visibleDraftSessions.length}`}
+                ? `Сессий в окне 2 месяцев: ${visibleDraftSessions.length}`
+                : `Sessions in 2-month window: ${visibleDraftSessions.length}`}
             </div>
             <Button onClick={onSaveMatrix} disabled={!isDirty} className="h-9 px-4 text-sm">
               {isRu ? 'Сохранить' : 'Save'}
@@ -518,12 +554,32 @@ export default function AdminSessionPoolManager({locale}: {locale: Locale}) {
         {error && <p className="mt-3 text-xs font-semibold text-state-danger">{error}</p>}
         {message && <p className="mt-3 text-xs font-semibold text-state-success">{message}</p>}
 
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hidden">
+          {weekRanges.map((range, index) => {
+            const isActive = range.startDay === activeWeekStartDay;
+            return (
+              <button
+                key={`${range.startDay}-${range.endDay}`}
+                type="button"
+                onClick={() => setActiveWeekStartDay(range.startDay)}
+                className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  isActive
+                    ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
+                    : 'border-border bg-bg-elevated text-text-muted hover:text-text'
+                }`}
+              >
+                {formatWeekRangeLabel(range.startIso, range.endIso, index + 1, locale)}
+              </button>
+            );
+          })}
+        </div>
+
         <div
-          className="mt-4 w-full max-w-full min-w-0 touch-pan-x overflow-x-scroll overflow-y-hidden overscroll-x-contain scrollbar-hidden"
+          className="mt-3 w-full max-w-full min-w-0 touch-pan-x overflow-x-scroll overflow-y-hidden overscroll-x-contain scrollbar-hidden"
           style={matrixScrollerStyle}
         >
           <div className="grid w-max gap-3 pb-1" style={matrixStyle}>
-              {dayNumbers.map((dayNumber) => {
+              {visibleDayNumbers.map((dayNumber) => {
                 const daySessions = sessionsByDay.get(dayNumber) ?? [];
                 const dayDateIso = addDaysToIso(baseDateIso, dayNumber - 1);
                 const dayLabel = formatDayLabel(dayDateIso, locale);

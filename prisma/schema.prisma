@@ -37,6 +37,7 @@ model User {
   email         String         @unique
   name          String
   lastName      String?
+  passwordHash  String?
   role          UserRole
   locale        String         @default("ru")
   memberships   Membership[]

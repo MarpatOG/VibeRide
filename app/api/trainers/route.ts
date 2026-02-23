@@ -2,6 +2,8 @@ import {NextRequest, NextResponse} from 'next/server';
 import {db} from '@/lib/db';
 import {toTrainerPayload} from '@/lib/server/db-serializers';
 import {Trainer} from '@/lib/types/trainer';
+import {getServerSession} from 'next-auth';
+import {authOptions} from '@/lib/auth-options';
 
 function toDbTrainerPayload(input: Trainer) {
   return {
@@ -15,18 +17,29 @@ function toDbTrainerPayload(input: Trainer) {
   };
 }
 
+async function ensureAdminAccess() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === 'admin';
+}
+
 export async function GET() {
   const trainers = await db.trainer.findMany({orderBy: {name: 'asc'}});
   return NextResponse.json(trainers.map((item) => toTrainerPayload(item)));
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await ensureAdminAccess())) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const payload = (await request.json()) as Trainer;
   const created = await db.trainer.create({data: toDbTrainerPayload(payload)});
   return NextResponse.json(toTrainerPayload(created), {status: 201});
 }
 
 export async function PUT(request: NextRequest) {
+  if (!(await ensureAdminAccess())) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const payload = (await request.json()) as Trainer[];
   await db.$transaction([
     db.trainer.deleteMany({}),

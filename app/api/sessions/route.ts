@@ -5,6 +5,8 @@ import {toSessionPayload} from '@/lib/server/db-serializers';
 import {DEFAULT_HALL_ID, findFirstHallSlotIssue} from '@/lib/schedule/slot-rules';
 import {toSlotValidationHttpError} from '@/lib/server/session-slot-validation';
 import {Session} from '@/lib/types/session';
+import {getServerSession} from 'next-auth';
+import {authOptions} from '@/lib/auth-options';
 
 function normalizeHallId(hallId: string | null | undefined) {
   return hallId || DEFAULT_HALL_ID;
@@ -38,12 +40,20 @@ function toDbSessionPayload(input: Session) {
   };
 }
 
+async function ensureAdminAccess() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === 'admin';
+}
+
 export async function GET() {
   const sessions = await db.session.findMany({orderBy: {startsAt: 'asc'}});
   return NextResponse.json(sessions.map((item) => toSessionPayload(item)));
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await ensureAdminAccess())) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const payload = normalizeSessionInput((await request.json()) as Session);
   const existing = await db.session.findMany({
     where: {hallId: payload.hallId},
@@ -77,6 +87,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  if (!(await ensureAdminAccess())) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const payload = ((await request.json()) as Session[]).map((item) => normalizeSessionInput(item));
   const issue = findFirstHallSlotIssue(payload);
 

@@ -1,7 +1,8 @@
 import {NextRequest, NextResponse} from 'next/server';
 import {db} from '@/lib/db';
 import {products} from '@/lib/constants/catalog';
-import {DEMO_CLIENT_USER_ID} from '@/lib/server/constants';
+import {getServerSession} from 'next-auth';
+import {authOptions} from '@/lib/auth-options';
 
 function createEntityId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -14,9 +15,14 @@ function buildDefaultMembershipValidUntilIso() {
 }
 
 export async function POST(request: NextRequest) {
-  const payload = (await request.json()) as {productId?: string; userId?: string};
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+  if (!userId) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
+
+  const payload = (await request.json()) as {productId?: string};
   const productId = payload.productId?.trim();
-  const userId = payload.userId?.trim() || DEMO_CLIENT_USER_ID;
 
   if (!productId) {
     return NextResponse.json({ok: false, reason: 'product-id-required'}, {status: 400});

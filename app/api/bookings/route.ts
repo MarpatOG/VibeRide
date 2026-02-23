@@ -1,10 +1,12 @@
 import {NextRequest, NextResponse} from 'next/server';
 import {db} from '@/lib/db';
-import {DEMO_CLIENT_USER_ID} from '@/lib/server/constants';
 import {CANCEL_WINDOW_MINUTES_BEFORE_START} from '@/lib/constants/booking';
+import {getServerSession} from 'next-auth';
+import {authOptions} from '@/lib/auth-options';
 
-function resolveUserId(request: NextRequest) {
-  return request.nextUrl.searchParams.get('userId') ?? DEMO_CLIENT_USER_ID;
+async function resolveSessionUserId() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.id ?? null;
 }
 
 function createHistoryEventId() {
@@ -18,7 +20,11 @@ function resolveCancelDeadlineMs(startsAt: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const userId = resolveUserId(request);
+  void request;
+  const userId = await resolveSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const bookings = await db.booking.findMany({
     where: {userId, status: 'booked'},
     orderBy: {bookedAt: 'desc'}
@@ -33,8 +39,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const payload = (await request.json()) as {sessionId: string; bikeNumber?: number; userId?: string};
-  const userId = payload.userId ?? DEMO_CLIENT_USER_ID;
+  const userId = await resolveSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
+
+  const payload = (await request.json()) as {sessionId: string; bikeNumber?: number};
   if (!payload.sessionId) {
     return NextResponse.json({ok: false, reason: 'session-id-required'}, {status: 400});
   }
@@ -147,7 +157,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const userId = resolveUserId(request);
+  const userId = await resolveSessionUserId();
+  if (!userId) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const sessionId = request.nextUrl.searchParams.get('sessionId');
   if (!sessionId) {
     return NextResponse.json({ok: false, reason: 'sessionId-required'}, {status: 400});

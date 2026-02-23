@@ -3,12 +3,12 @@
 import {useEffect, useRef, useState} from 'react';
 import clsx from 'clsx';
 import {usePathname, useRouter} from 'next/navigation';
+import {signOut, useSession} from 'next-auth/react';
 import {Link} from '@/lib/navigation';
 import {useLocale, useT} from '@/lib/locale-client';
 import {Locale} from '@/lib/locale';
 import Button from '@/components/ui/Button';
 import Drawer from '@/components/ui/Drawer';
-import {clearMockSession, getMockSession, mockAuthChangeEvent, mockAuthStorageKey, MockSession} from '@/lib/mock-auth';
 
 const navLinks = [
   {key: 'about', href: '/about'},
@@ -23,9 +23,9 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const t = useT();
+  const {data: sessionData} = useSession();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [session, setSession] = useState<MockSession | null>(null);
   const [indicatorStyle, setIndicatorStyle] = useState<{x: number; width: number; visible: boolean}>({
     x: 0,
     width: 0,
@@ -34,13 +34,14 @@ export default function Header() {
   const navRef = useRef<HTMLElement | null>(null);
   const mobileMenuCloseGuardUntilRef = useRef(0);
 
-  const profileHref = session?.role === 'admin' ? '/admin' : session?.role === 'trainer' ? '/trainer' : '/profile';
-  const authLabel = session
-    ? session.name.trim() || (locale === 'ru' ? 'Профиль' : 'Profile')
+  const role = sessionData?.user?.role;
+  const profileHref = role === 'admin' ? '/admin' : role === 'trainer' ? '/trainer' : '/profile';
+  const authLabel = sessionData?.user
+    ? sessionData.user.name?.trim() || (locale === 'ru' ? 'Профиль' : 'Profile')
     : locale === 'ru'
       ? 'Войти'
       : 'Sign in';
-  const authHref = session ? profileHref : '/login';
+  const authHref = sessionData?.user ? profileHref : '/login';
   const isLanding = pathname === `/${locale}` || pathname === '/';
   const isLightTheme = theme === 'light';
 
@@ -54,8 +55,8 @@ export default function Header() {
     setOpen(true);
   };
 
-  const handleLogout = () => {
-    clearMockSession();
+  const handleLogout = async () => {
+    await signOut({redirect: false});
     setOpen(false);
     router.push('/login');
     router.refresh();
@@ -114,23 +115,6 @@ export default function Header() {
       visible: true
     });
   };
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const syncSession = () => setSession(getMockSession());
-    const onStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === mockAuthStorageKey) {
-        syncSession();
-      }
-    };
-    syncSession();
-    window.addEventListener('storage', onStorage);
-    window.addEventListener(mockAuthChangeEvent, syncSession);
-    return () => {
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener(mockAuthChangeEvent, syncSession);
-    };
-  }, []);
 
   return (
     <header
@@ -240,7 +224,7 @@ export default function Header() {
               {t('nav.ctaBook')}
             </Button>
           </Link>
-          {session ? (
+          {sessionData?.user ? (
             <div className="group/profile relative">
               <Link href={authHref} locale={locale}>
                 <Button
@@ -321,7 +305,7 @@ export default function Header() {
             <Link href="/schedule" locale={locale} onClick={closeMobileMenu}>
               <Button className="w-full">{t('nav.ctaBook')}</Button>
             </Link>
-            {session ? (
+            {sessionData?.user ? (
               <>
                 <Link href={authHref} locale={locale} onClick={closeMobileMenu}>
                   <Button variant="secondary" className="w-full">

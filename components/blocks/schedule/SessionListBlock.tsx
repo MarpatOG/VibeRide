@@ -13,6 +13,7 @@ import {t} from '@/lib/utils/localized';
 import {getTrainerShortName} from '@/lib/utils/trainer';
 
 const MIN_SCHEDULE_DAYS = 10;
+const DAYS_IN_WEEK = 7;
 const SCHEDULE_DESCRIPTION_MAX_CHARS = 72;
 const PAST_STATUS_REFRESH_MS = 30_000;
 
@@ -56,6 +57,12 @@ function formatDayLabel(dateKey: string, locale: Locale) {
     .toUpperCase();
   const dayMonth = `${dateKey.slice(8, 10)}.${dateKey.slice(5, 7)}`;
   return `${weekday} - ${dayMonth}`;
+}
+
+function formatWeekLabel(startIso: string, endIso: string, weekNumber: number, locale: Locale) {
+  const startLabel = locale === 'ru' ? `${startIso.slice(8, 10)}.${startIso.slice(5, 7)}` : `${startIso.slice(5, 7)}/${startIso.slice(8, 10)}`;
+  const endLabel = locale === 'ru' ? `${endIso.slice(8, 10)}.${endIso.slice(5, 7)}` : `${endIso.slice(5, 7)}/${endIso.slice(8, 10)}`;
+  return locale === 'ru' ? `Нед ${weekNumber} · ${startLabel}-${endLabel}` : `Week ${weekNumber} · ${startLabel}-${endLabel}`;
 }
 
 function addDaysToIso(dateIso: string, days: number) {
@@ -163,12 +170,57 @@ export default function SessionListBlock({
     );
   }, [clientSessions, days]);
 
+  const weekRanges = useMemo(() => {
+    return Array.from({length: Math.ceil(days.length / DAYS_IN_WEEK)}, (_, index) => {
+      const startIndex = index * DAYS_IN_WEEK;
+      const endIndex = Math.min(days.length - 1, startIndex + DAYS_IN_WEEK - 1);
+      return {
+        startIndex,
+        endIndex,
+        startIso: days[startIndex],
+        endIso: days[endIndex]
+      };
+    });
+  }, [days]);
+
+  const [activeWeekStartIndex, setActiveWeekStartIndex] = useState(0);
+
+  useEffect(() => {
+    if (weekRanges.length === 0) {
+      if (activeWeekStartIndex !== 0) setActiveWeekStartIndex(0);
+      return;
+    }
+    const hasActiveWeek = weekRanges.some((range) => range.startIndex === activeWeekStartIndex);
+    if (!hasActiveWeek) {
+      setActiveWeekStartIndex(weekRanges[0].startIndex);
+    }
+  }, [weekRanges, activeWeekStartIndex]);
+
+  useEffect(() => {
+    if (!selected || weekRanges.length === 0) return;
+    const selectedDay = getDateKey(selected.startsAt);
+    const targetWeek = weekRanges.find((range) => selectedDay >= range.startIso && selectedDay <= range.endIso);
+    if (targetWeek && targetWeek.startIndex !== activeWeekStartIndex) {
+      setActiveWeekStartIndex(targetWeek.startIndex);
+    }
+  }, [selected, weekRanges, activeWeekStartIndex]);
+
+  const visibleDays = useMemo(
+    () => days.slice(activeWeekStartIndex, activeWeekStartIndex + DAYS_IN_WEEK),
+    [days, activeWeekStartIndex]
+  );
+
+  const visibleByDay = useMemo(
+    () => byDay.slice(activeWeekStartIndex, activeWeekStartIndex + DAYS_IN_WEEK),
+    [byDay, activeWeekStartIndex]
+  );
+
   const gridStyle = {
-    gridTemplateColumns: `repeat(${days.length}, minmax(220px, 1fr))`
+    gridTemplateColumns: `repeat(${Math.max(1, visibleDays.length)}, minmax(220px, 1fr))`
   } as CSSProperties;
 
   useEffect(() => {
-    if (days.length === 0) return;
+    if (visibleDays.length === 0) return;
     const topScroller = topScrollerRef.current;
     const contentScroller = contentScrollerRef.current;
     if (!topScroller || !contentScroller) return;
@@ -194,6 +246,8 @@ export default function SessionListBlock({
     };
 
     updateTrackWidth();
+    contentScroller.scrollLeft = 0;
+    topScroller.scrollLeft = 0;
     contentScroller.addEventListener('scroll', syncTopFromContent, {passive: true});
     topScroller.addEventListener('scroll', syncContentFromTop, {passive: true});
     window.addEventListener('resize', updateTrackWidth);
@@ -207,7 +261,7 @@ export default function SessionListBlock({
       window.removeEventListener('resize', updateTrackWidth);
       resizeObserver.disconnect();
     };
-  }, [days.length]);
+  }, [visibleDays.length, activeWeekStartIndex]);
 
   if (days.length === 0) {
     return (
@@ -224,6 +278,26 @@ export default function SessionListBlock({
 
   return (
     <section className="container-wide pt-0">
+      <div className="mb-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hidden">
+        {weekRanges.map((range, index) => {
+          const active = range.startIndex === activeWeekStartIndex;
+          return (
+            <button
+              key={`${range.startIso}-${range.endIso}`}
+              type="button"
+              onClick={() => setActiveWeekStartIndex(range.startIndex)}
+              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                active
+                  ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
+                  : 'border-border bg-bg-elevated text-text-muted hover:text-text'
+              }`}
+            >
+              {formatWeekLabel(range.startIso, range.endIso, index + 1, locale)}
+            </button>
+          );
+        })}
+      </div>
+
       <div
         ref={topScrollerRef}
         className="mt-[5px] mb-[5px] overflow-x-auto scrollbar-minimal touch-pan-x"
@@ -231,19 +305,20 @@ export default function SessionListBlock({
       >
         <div style={{width: `${topTrackWidth}px`}}>
           <div className="grid gap-3" style={gridStyle}>
-            {days.map((day) => (
+            {visibleDays.map((day) => (
               <div key={`${day}-top-scroll`} className="h-2 rounded-full bg-border/65" />
             ))}
           </div>
         </div>
       </div>
+
       <div
         ref={contentScrollerRef}
         className="overflow-x-auto pb-2 scrollbar-hidden touch-pan-x overscroll-x-contain"
       >
-        <div className="min-w-[980px]">
+        <div style={{minWidth: `${Math.max(980, visibleDays.length * 220)}px`}}>
           <div className="mb-1 grid gap-3" style={gridStyle}>
-            {days.map((day) => (
+            {visibleDays.map((day) => (
               <div key={day} className="px-1 pb-1 text-sm font-semibold uppercase text-text-muted">
                 {formatDayLabel(day, locale)}
               </div>
@@ -251,8 +326,8 @@ export default function SessionListBlock({
           </div>
 
           <div className="grid gap-3" style={gridStyle}>
-            {byDay.map((daySessions, dayIndex) => (
-              <div key={days[dayIndex]} className="flex flex-col gap-2">
+            {visibleByDay.map((daySessions, dayIndex) => (
+              <div key={visibleDays[dayIndex]} className="flex flex-col gap-2">
                 {daySessions.map((session) => {
                   const trainer = trainers.find((item) => item.id === session.trainerId);
                   const isPast = isPastSession(session.startsAt, session.durationMin, nowTimestamp);
@@ -337,4 +412,3 @@ export default function SessionListBlock({
     </section>
   );
 }
-

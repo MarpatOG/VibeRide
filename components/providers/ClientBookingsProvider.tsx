@@ -1,8 +1,7 @@
 'use client';
 
 import {createContext, useContext, useEffect, useMemo, useState} from 'react';
-
-const DEMO_USER_ID = 'u-client';
+import {useSession} from 'next-auth/react';
 
 export type ClientBookingRecord = {
   sessionId: string;
@@ -36,13 +35,20 @@ function isBookingArray(value: unknown): value is ClientBookingRecord[] {
 }
 
 export function ClientBookingsProvider({children}: {children: React.ReactNode}) {
+  const {status} = useSession();
   const [bookings, setBookings] = useState<ClientBookingRecord[]>([]);
 
   useEffect(() => {
+    if (status === 'loading') return;
+    if (status !== 'authenticated') {
+      setBookings([]);
+      return;
+    }
+
     let cancelled = false;
     const load = async () => {
       try {
-        const response = await fetch(`/api/bookings?userId=${encodeURIComponent(DEMO_USER_ID)}`, {cache: 'no-store'});
+        const response = await fetch('/api/bookings', {cache: 'no-store'});
         if (!response.ok) {
           const details = await response.text().catch(() => '');
           console.error(
@@ -64,7 +70,7 @@ export function ClientBookingsProvider({children}: {children: React.ReactNode}) 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [status]);
 
   const value = useMemo<ClientBookingsContextValue>(
     () => ({
@@ -72,6 +78,9 @@ export function ClientBookingsProvider({children}: {children: React.ReactNode}) 
       isBooked: (sessionId) => bookings.some((item) => item.sessionId === sessionId),
       getBooking: (sessionId) => bookings.find((item) => item.sessionId === sessionId) ?? null,
       bookSession: async ({sessionId, bikeNumber}) => {
+        if (status !== 'authenticated') {
+          return {ok: false, reason: 'unauthorized'};
+        }
         if (bookings.some((item) => item.sessionId === sessionId)) {
           return {ok: false, reason: 'already-booked'};
         }
@@ -79,7 +88,7 @@ export function ClientBookingsProvider({children}: {children: React.ReactNode}) 
           const response = await fetch('/api/bookings', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({userId: DEMO_USER_ID, sessionId, bikeNumber})
+            body: JSON.stringify({sessionId, bikeNumber})
           });
           const payload = (await response.json().catch(() => null)) as
             | {sessionId?: string; bookedAt?: string; bikeNumber?: number; remainingSessions?: number; reason?: string}
@@ -104,11 +113,12 @@ export function ClientBookingsProvider({children}: {children: React.ReactNode}) 
         }
       },
       cancelSession: (sessionId) => {
+        if (status !== 'authenticated') return false;
         const exists = bookings.some((item) => item.sessionId === sessionId);
         if (!exists) return false;
         const previous = bookings;
         setBookings((prev) => prev.filter((item) => item.sessionId !== sessionId));
-        void fetch(`/api/bookings?userId=${encodeURIComponent(DEMO_USER_ID)}&sessionId=${encodeURIComponent(sessionId)}`, {
+        void fetch(`/api/bookings?sessionId=${encodeURIComponent(sessionId)}`, {
           method: 'DELETE'
         })
           .then(async (response) => {
@@ -122,7 +132,7 @@ export function ClientBookingsProvider({children}: {children: React.ReactNode}) 
         return true;
       }
     }),
-    [bookings]
+    [bookings, status]
   );
 
   return <ClientBookingsContext.Provider value={value}>{children}</ClientBookingsContext.Provider>;

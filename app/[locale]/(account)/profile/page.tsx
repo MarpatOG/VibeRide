@@ -20,7 +20,6 @@ import {t} from '@/lib/utils/localized';
 import {getTrainerFullName} from '@/lib/utils/trainer';
 import {CANCEL_WINDOW_MINUTES_BEFORE_START} from '@/lib/constants/booking';
 
-const DEMO_USER_ID = 'u-client';
 type SaveState = 'idle' | 'saving' | 'success' | 'error';
 
 function buildFreeCancelUntilIso(startsAt: string) {
@@ -60,7 +59,7 @@ export default function ProfileDashboardPage() {
     let cancelled = false;
     const load = async () => {
       try {
-        const response = await fetch(`/api/profile?userId=${encodeURIComponent(DEMO_USER_ID)}`, {cache: 'no-store'});
+        const response = await fetch('/api/profile', {cache: 'no-store'});
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = (await response.json()) as {profile: UserProfile; membership: Membership};
         if (cancelled) return;

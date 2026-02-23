@@ -1,7 +1,18 @@
-﻿import {Locale} from '@/lib/locale';
+﻿import {redirect} from 'next/navigation';
+import {getServerSession} from 'next-auth';
+import {Locale} from '@/lib/locale';
+import {authOptions} from '@/lib/auth-options';
 import AdminDashboardShell from '@/components/admin/AdminDashboardShell';
 
 export default async function AdminPage({params}: {params: Promise<{locale: Locale}>}) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    redirect('/login');
+  }
+  if (session.user.role !== 'admin') {
+    redirect('/profile');
+  }
+
   const {locale} = await params;
 
   return (

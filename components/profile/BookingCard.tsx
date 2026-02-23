@@ -1,4 +1,4 @@
-import Button from '@/components/ui/Button';
+﻿import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import {Locale} from '@/lib/locale';
 import {Booking} from '@/lib/types/profile';
@@ -55,11 +55,13 @@ export default function BookingCard({
           : `Free cancellation until: ${formatDateTime(booking.freeCancelUntil, locale)}`}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="ghost" onClick={() => onCancel(booking)} disabled={isPast}>
-          {locale === 'ru' ? 'Отменить' : 'Cancel'}
-        </Button>
-      </div>
+      {!isPast ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="ghost" onClick={() => onCancel(booking)}>
+            {locale === 'ru' ? 'Отменить' : 'Cancel'}
+          </Button>
+        </div>
+      ) : null}
     </Card>
   );
 }

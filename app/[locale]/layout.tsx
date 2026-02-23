@@ -6,6 +6,7 @@ import {ToastProvider, ToastViewport} from '@/components/ui/Toast';
 import {SessionPoolProvider} from '@/components/providers/SessionPoolProvider';
 import {TrainerPoolProvider} from '@/components/providers/TrainerPoolProvider';
 import {ClientBookingsProvider} from '@/components/providers/ClientBookingsProvider';
+import AuthSessionProvider from '@/components/providers/AuthSessionProvider';
 
 export default async function LocaleLayout({
   children,
@@ -21,19 +22,21 @@ export default async function LocaleLayout({
   }
 
   return (
-    <ToastProvider>
-      <SessionPoolProvider>
-        <ClientBookingsProvider>
-          <TrainerPoolProvider>
-            <div className="min-h-screen bg-bg text-text">
-              <Header />
-              <main className="pb-24">{children}</main>
-              <Footer locale={locale} />
-              <ToastViewport />
-            </div>
-          </TrainerPoolProvider>
-        </ClientBookingsProvider>
-      </SessionPoolProvider>
-    </ToastProvider>
+    <AuthSessionProvider>
+      <ToastProvider>
+        <SessionPoolProvider>
+          <ClientBookingsProvider>
+            <TrainerPoolProvider>
+              <div className="min-h-screen bg-bg text-text">
+                <Header />
+                <main className="pb-24">{children}</main>
+                <Footer locale={locale} />
+                <ToastViewport />
+              </div>
+            </TrainerPoolProvider>
+          </ClientBookingsProvider>
+        </SessionPoolProvider>
+      </ToastProvider>
+    </AuthSessionProvider>
   );
 }

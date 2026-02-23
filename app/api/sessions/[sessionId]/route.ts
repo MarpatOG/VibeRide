@@ -5,6 +5,8 @@ import {toSessionPayload} from '@/lib/server/db-serializers';
 import {DEFAULT_HALL_ID, findFirstHallSlotIssue} from '@/lib/schedule/slot-rules';
 import {toSlotValidationHttpError} from '@/lib/server/session-slot-validation';
 import {Session} from '@/lib/types/session';
+import {getServerSession} from 'next-auth';
+import {authOptions} from '@/lib/auth-options';
 
 function normalizeHallId(hallId: string | null | undefined) {
   return hallId || DEFAULT_HALL_ID;
@@ -30,7 +32,15 @@ function toDbSessionPatch(input: Partial<Session>) {
   };
 }
 
+async function ensureAdminAccess() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === 'admin';
+}
+
 export async function PATCH(request: NextRequest, context: {params: Promise<{sessionId: string}>}) {
+  if (!(await ensureAdminAccess())) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const {sessionId} = await context.params;
   const payload = (await request.json()) as Partial<Session>;
   const existing = await db.session.findUnique({
@@ -82,6 +92,9 @@ export async function PATCH(request: NextRequest, context: {params: Promise<{ses
 }
 
 export async function DELETE(_request: NextRequest, context: {params: Promise<{sessionId: string}>}) {
+  if (!(await ensureAdminAccess())) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const {sessionId} = await context.params;
   await db.booking.deleteMany({where: {sessionId}});
   await db.session.delete({where: {id: sessionId}});

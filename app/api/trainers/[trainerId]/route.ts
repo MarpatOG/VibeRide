@@ -2,6 +2,8 @@ import {NextRequest, NextResponse} from 'next/server';
 import {db} from '@/lib/db';
 import {toTrainerPayload} from '@/lib/server/db-serializers';
 import {Trainer} from '@/lib/types/trainer';
+import {getServerSession} from 'next-auth';
+import {authOptions} from '@/lib/auth-options';
 
 function toDbTrainerPayload(input: Trainer) {
   return {
@@ -14,7 +16,15 @@ function toDbTrainerPayload(input: Trainer) {
   };
 }
 
+async function ensureAdminAccess() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === 'admin';
+}
+
 export async function PATCH(request: NextRequest, context: {params: Promise<{trainerId: string}>}) {
+  if (!(await ensureAdminAccess())) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const {trainerId} = await context.params;
   const payload = (await request.json()) as Trainer;
   const updated = await db.trainer.update({
@@ -25,6 +35,9 @@ export async function PATCH(request: NextRequest, context: {params: Promise<{tra
 }
 
 export async function DELETE(_request: NextRequest, context: {params: Promise<{trainerId: string}>}) {
+  if (!(await ensureAdminAccess())) {
+    return NextResponse.json({ok: false, reason: 'unauthorized'}, {status: 401});
+  }
   const {trainerId} = await context.params;
   await db.trainer.delete({where: {id: trainerId}});
   return NextResponse.json({ok: true});
