@@ -17,6 +17,11 @@ const PAST_STATUS_REFRESH_MS = 30_000;
 const SCHEDULE_DESCRIPTION_MAX_CHARS = 72;
 const UPCOMING_ITEMS_LIMIT = 12;
 const SWIPE_CARD_STEP_THRESHOLD_PX = 14;
+const SWIPE_ANIMATION_DURATION_MS = 220;
+
+function easeOutCubic(progress: number) {
+  return 1 - (1 - progress) ** 3;
+}
 
 function formatSessionDayLabel(dateKey: string, locale: Locale) {
   const date = new Date(`${dateKey}T00:00:00Z`);
@@ -78,6 +83,7 @@ export default function UpcomingClassesBlock({
   const topScrollerRef = useRef<HTMLDivElement | null>(null);
   const contentScrollerRef = useRef<HTMLDivElement | null>(null);
   const swipeStartRef = useRef<{x: number; y: number} | null>(null);
+  const swipeAnimationFrameRef = useRef<number | null>(null);
   const cardStepRef = useRef(0);
   const [topTrackWidth, setTopTrackWidth] = useState(0);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
@@ -172,7 +178,55 @@ export default function UpcomingClassesBlock({
     };
   }, [items.length]);
 
+  useEffect(() => {
+    return () => {
+      if (swipeAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(swipeAnimationFrameRef.current);
+        swipeAnimationFrameRef.current = null;
+      }
+    };
+  }, []);
+
+  const stopSwipeAnimation = () => {
+    if (swipeAnimationFrameRef.current !== null) {
+      cancelAnimationFrame(swipeAnimationFrameRef.current);
+      swipeAnimationFrameRef.current = null;
+    }
+  };
+
+  const animateSwipeTo = (element: HTMLDivElement, targetLeft: number) => {
+    const startLeft = element.scrollLeft;
+    if (Math.abs(targetLeft - startLeft) < 1) {
+      element.scrollLeft = targetLeft;
+      return;
+    }
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      element.scrollLeft = targetLeft;
+      return;
+    }
+
+    stopSwipeAnimation();
+    const startedAt = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = now - startedAt;
+      const progress = Math.min(1, elapsed / SWIPE_ANIMATION_DURATION_MS);
+      const eased = easeOutCubic(progress);
+      element.scrollLeft = startLeft + (targetLeft - startLeft) * eased;
+      if (progress < 1) {
+        swipeAnimationFrameRef.current = requestAnimationFrame(tick);
+      } else {
+        swipeAnimationFrameRef.current = null;
+      }
+    };
+
+    swipeAnimationFrameRef.current = requestAnimationFrame(tick);
+  };
+
   const onContentTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    stopSwipeAnimation();
     const point = event.touches[0];
     if (!point) return;
     swipeStartRef.current = {x: point.clientX, y: point.clientY};
@@ -197,7 +251,7 @@ export default function UpcomingClassesBlock({
     const currentIndex = Math.round(contentScroller.scrollLeft / step);
     const nextIndex = Math.max(0, Math.min(Math.ceil(maxLeft / step), currentIndex + direction));
     const nextLeft = Math.max(0, Math.min(maxLeft, nextIndex * step));
-    contentScroller.scrollTo({left: nextLeft, behavior: 'auto'});
+    animateSwipeTo(contentScroller, nextLeft);
   };
 
   useEffect(() => {

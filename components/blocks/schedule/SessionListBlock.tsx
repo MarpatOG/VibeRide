@@ -268,6 +268,13 @@ export default function SessionListBlock({
     () => byDay.slice(activeWeekStartIndex, activeWeekStartIndex + DAYS_IN_WEEK),
     [byDay, activeWeekStartIndex]
   );
+  const activeMobileWeekIndex = useMemo(() => {
+    if (weekRanges.length === 0) return 0;
+    const foundIndex = weekRanges.findIndex(
+      (range) => activeMobileDayIndex >= range.startIndex && activeMobileDayIndex <= range.endIndex
+    );
+    return foundIndex >= 0 ? foundIndex : 0;
+  }, [weekRanges, activeMobileDayIndex]);
   const activeMobileDayIso = days[activeMobileDayIndex] ?? '';
   const activeMobileDaySessions = byDay[activeMobileDayIndex] ?? [];
   const canGoMobilePrev = activeMobileDayIndex > 0;
@@ -292,6 +299,14 @@ export default function SessionListBlock({
     if (!canGoMobileNext) return;
     setActiveMobileDayIndex((prev) => Math.min(days.length - 1, prev + 1));
   }, [canGoMobileNext, days.length]);
+  const goMobileWeek = useCallback(
+    (weekIndex: number) => {
+      const targetRange = weekRanges[weekIndex];
+      if (!targetRange) return;
+      setActiveMobileDayIndex(targetRange.startIndex);
+    },
+    [weekRanges]
+  );
 
   const gridStyle = {
     gridTemplateColumns: `repeat(${Math.max(1, visibleDays.length)}, minmax(220px, 1fr))`
@@ -357,6 +372,31 @@ export default function SessionListBlock({
   return (
     <section className="container-schedule pt-0">
       <div className="md:hidden">
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => goMobileWeek(0)}
+            className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+              activeMobileWeekIndex === 0
+                ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
+                : 'border-border bg-bg-elevated text-text-muted'
+            }`}
+          >
+            {locale === 'ru' ? 'Текущая неделя' : 'Current week'}
+          </button>
+          <button
+            type="button"
+            onClick={() => goMobileWeek(1)}
+            disabled={weekRanges.length < 2}
+            className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${
+              activeMobileWeekIndex === 1
+                ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
+                : 'border-border bg-bg-elevated text-text-muted'
+            } disabled:cursor-not-allowed disabled:opacity-40`}
+          >
+            {locale === 'ru' ? 'Следующая неделя' : 'Next week'}
+          </button>
+        </div>
         <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-elevated px-3 py-2">
           <button
             type="button"
