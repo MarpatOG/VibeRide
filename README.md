@@ -28,25 +28,6 @@ npm start
 - Database connection is configured in `.env` via `POSTGRES_PRISMA_URL` (and optionally `POSTGRES_URL_NON_POOLING` for migrations).
 - Docker Desktop must be installed and running before `npm start`.
 
-## Seed Schedule From CSV
-
-To reseed only schedule (sessions + bookings) from `mockschedule.csv` starting from today:
-
-```bash
-npm run db:seed:schedule:csv
-```
-
-Defaults:
-- `DAYS=10`
-- `TZ_OFFSET=+03:00`
-- `CAPACITY=20`
-
-Optional overrides:
-
-```bash
-DAYS=10 TZ_OFFSET=+03:00 CAPACITY=20 npm run db:seed:schedule:csv
-```
-
 ## Mock Accounts (Demo)
 
 1) Client
