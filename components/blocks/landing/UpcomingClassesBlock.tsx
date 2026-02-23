@@ -16,6 +16,7 @@ import {getTrainerShortName} from '@/lib/utils/trainer';
 const PAST_STATUS_REFRESH_MS = 30_000;
 const SCHEDULE_DESCRIPTION_MAX_CHARS = 72;
 const UPCOMING_ITEMS_LIMIT = 12;
+const SWIPE_CARD_STEP_THRESHOLD_PX = 14;
 
 function formatSessionDayLabel(dateKey: string, locale: Locale) {
   const date = new Date(`${dateKey}T00:00:00Z`);
@@ -185,15 +186,18 @@ export default function UpcomingClassesBlock({
 
     const deltaX = point.clientX - start.x;
     const deltaY = point.clientY - start.y;
-    if (Math.abs(deltaX) < 32 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    if (Math.abs(deltaX) < SWIPE_CARD_STEP_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) return;
 
     const contentScroller = contentScrollerRef.current;
     if (!contentScroller) return;
 
     const step = cardStepRef.current || Math.round(contentScroller.clientWidth * 0.86);
     const direction = deltaX < 0 ? 1 : -1;
-    const nextLeft = Math.max(0, contentScroller.scrollLeft + direction * step);
-    contentScroller.scrollTo({left: nextLeft, behavior: 'smooth'});
+    const maxLeft = Math.max(0, contentScroller.scrollWidth - contentScroller.clientWidth);
+    const currentIndex = Math.round(contentScroller.scrollLeft / step);
+    const nextIndex = Math.max(0, Math.min(Math.ceil(maxLeft / step), currentIndex + direction));
+    const nextLeft = Math.max(0, Math.min(maxLeft, nextIndex * step));
+    contentScroller.scrollTo({left: nextLeft, behavior: 'auto'});
   };
 
   useEffect(() => {
@@ -258,17 +262,20 @@ export default function UpcomingClassesBlock({
         <div className="relative bg-transparent">
           <div
             ref={topScrollerRef}
-            className="mt-[5px] mb-[5px] overflow-x-auto scrollbar-minimal"
+            className="mt-[5px] mb-[5px] hidden overflow-x-auto scrollbar-minimal md:block"
             aria-label={locale === 'ru' ? 'Верхняя прокрутка ближайших занятий' : 'Top upcoming classes scroll'}
           >
             <div className="h-px" style={{width: `${topTrackWidth}px`}} />
           </div>
           <div
             ref={contentScrollerRef}
-            className="overflow-x-auto bg-transparent pb-4 scrollbar-hidden snap-x snap-mandatory touch-auto overscroll-x-contain sm:snap-none"
+            className="overflow-x-auto bg-transparent pb-4 scrollbar-hidden snap-x snap-mandatory touch-pan-x overscroll-x-contain sm:snap-none"
             onTouchStart={onContentTouchStart}
             onTouchEnd={onContentTouchEnd}
-            style={{touchAction: 'manipulation'}}
+            onTouchCancel={() => {
+              swipeStartRef.current = null;
+            }}
+            style={{touchAction: 'pan-x'}}
           >
             <div className="flex gap-5 bg-transparent py-1 pl-0 pr-1 sm:px-1">
             {items.map((session) => {
@@ -289,13 +296,19 @@ export default function UpcomingClassesBlock({
                 <div
                   key={session.id}
                   data-upcoming-card="true"
-                  className="h-[248px] w-[calc(100vw-2rem)] max-w-full shrink-0 snap-start snap-always overflow-hidden rounded-2xl border border-border bg-bg-elevated shadow-[0_10px_30px_rgba(15,23,42,0.08)] transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,0.12)] sm:w-[448px]"
+                  className="h-[248px] w-[calc(100vw-2rem)] max-w-full shrink-0 snap-start snap-always overflow-hidden rounded-2xl border border-border bg-bg-elevated shadow-[0_10px_30px_rgba(15,23,42,0.08)] transition-transform duration-300 md:hover:-translate-y-0.5 md:hover:shadow-[0_14px_34px_rgba(15,23,42,0.12)] sm:w-[448px]"
+                  style={{transform: 'translateZ(0)', backfaceVisibility: 'hidden'}}
                 >
                   <div className="flex h-full">
                     <div className="relative h-full w-[132px] shrink-0 sm:w-[154px]">
-                      <img src={trainer?.photoUrl} alt={trainerLabel} className="h-full w-full object-cover" />
+                      <img
+                        src={trainer?.photoUrl}
+                        alt={trainerLabel}
+                        className="h-full w-full object-cover"
+                        style={{transform: 'translateZ(0)', backfaceVisibility: 'hidden'}}
+                      />
                       <div className="pointer-events-none absolute right-0 bottom-[15px] left-0 flex justify-center">
-                        <span className="inline-flex h-[24px] max-w-[calc(100%-18px)] items-center justify-center overflow-hidden rounded-[999px] bg-black/60 px-3 text-center text-[14px] font-semibold tracking-[0.01em] text-white backdrop-blur-[3px]">
+                        <span className="inline-flex h-[24px] max-w-[calc(100%-18px)] items-center justify-center overflow-hidden rounded-[999px] bg-black/60 px-3 text-center text-[14px] font-semibold tracking-[0.01em] text-white backdrop-blur-0 sm:backdrop-blur-[3px]">
                           <span className="truncate">{trainerLabel}</span>
                         </span>
                       </div>

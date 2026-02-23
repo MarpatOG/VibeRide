@@ -216,6 +216,7 @@ export default function SessionListBlock({
   }, [days, todayIso, currentWeekEndIso]);
 
   const [activeWeekStartIndex, setActiveWeekStartIndex] = useState(0);
+  const [activeMobileDayIndex, setActiveMobileDayIndex] = useState(0);
 
   useEffect(() => {
     if (weekRanges.length === 0) {
@@ -229,6 +230,16 @@ export default function SessionListBlock({
   }, [weekRanges, activeWeekStartIndex]);
 
   useEffect(() => {
+    if (days.length === 0) {
+      if (activeMobileDayIndex !== 0) setActiveMobileDayIndex(0);
+      return;
+    }
+    if (activeMobileDayIndex > days.length - 1) {
+      setActiveMobileDayIndex(days.length - 1);
+    }
+  }, [days.length, activeMobileDayIndex]);
+
+  useEffect(() => {
     if (!selected || weekRanges.length === 0) return;
     const selectedDay = getDateKey(selected.startsAt);
     const targetWeek = weekRanges.find((range) => selectedDay >= range.startIso && selectedDay <= range.endIso);
@@ -239,6 +250,15 @@ export default function SessionListBlock({
     }
   }, [selected, weekRanges, activeWeekStartIndex, startWeekSwitchTransition]);
 
+  useEffect(() => {
+    if (!selected || days.length === 0) return;
+    const selectedDay = getDateKey(selected.startsAt);
+    const selectedDayIndex = days.findIndex((day) => day === selectedDay);
+    if (selectedDayIndex >= 0 && selectedDayIndex !== activeMobileDayIndex) {
+      setActiveMobileDayIndex(selectedDayIndex);
+    }
+  }, [selected, days, activeMobileDayIndex]);
+
   const visibleDays = useMemo(
     () => days.slice(activeWeekStartIndex, activeWeekStartIndex + DAYS_IN_WEEK),
     [days, activeWeekStartIndex]
@@ -248,6 +268,10 @@ export default function SessionListBlock({
     () => byDay.slice(activeWeekStartIndex, activeWeekStartIndex + DAYS_IN_WEEK),
     [byDay, activeWeekStartIndex]
   );
+  const activeMobileDayIso = days[activeMobileDayIndex] ?? '';
+  const activeMobileDaySessions = byDay[activeMobileDayIndex] ?? [];
+  const canGoMobilePrev = activeMobileDayIndex > 0;
+  const canGoMobileNext = activeMobileDayIndex < days.length - 1;
   const trainerById = useMemo(() => {
     return new Map(trainers.map((trainer) => [trainer.id, trainer] as const));
   }, [trainers]);
@@ -260,6 +284,14 @@ export default function SessionListBlock({
     },
     [activeWeekStartIndex, isPendingWeekSwitch, startWeekSwitchTransition]
   );
+  const goMobilePrevDay = useCallback(() => {
+    if (!canGoMobilePrev) return;
+    setActiveMobileDayIndex((prev) => Math.max(0, prev - 1));
+  }, [canGoMobilePrev]);
+  const goMobileNextDay = useCallback(() => {
+    if (!canGoMobileNext) return;
+    setActiveMobileDayIndex((prev) => Math.min(days.length - 1, prev + 1));
+  }, [canGoMobileNext, days.length]);
 
   const gridStyle = {
     gridTemplateColumns: `repeat(${Math.max(1, visibleDays.length)}, minmax(220px, 1fr))`
@@ -324,147 +356,263 @@ export default function SessionListBlock({
 
   return (
     <section className="container-schedule pt-0">
-      <div className="mb-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hidden">
-        {weekRanges.map((range, index) => {
-          const active = range.startIndex === activeWeekStartIndex;
-          return (
-            <button
-              key={`${range.startIso}-${range.endIso}`}
-              type="button"
-              onClick={() => handleWeekClick(range.startIndex)}
-              disabled={isPendingWeekSwitch}
-              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                active
-                  ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
-                  : 'border-border bg-bg-elevated text-text-muted hover:text-text'
-              }`}
-            >
-              {formatWeekLabel(range.startIso, range.endIso, index + 1, locale)}
-            </button>
-          );
-        })}
-      </div>
-
-      <div
-        ref={topScrollerRef}
-        className="mt-[5px] mb-[5px] overflow-x-auto scrollbar-minimal touch-pan-x"
-        aria-label={locale === 'ru' ? 'Верхняя прокрутка расписания' : 'Top schedule scroll'}
-      >
-        <div style={{width: `${topTrackWidth}px`}}>
-          <div className="grid gap-3" style={gridStyle}>
-            {visibleDays.map((day) => (
-              <div key={`${day}-top-scroll`} className="h-2 rounded-full bg-border/65" />
-            ))}
+      <div className="md:hidden">
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-elevated px-3 py-2">
+          <button
+            type="button"
+            onClick={goMobilePrevDay}
+            disabled={!canGoMobilePrev}
+            className="h-9 w-9 rounded-full border border-border text-xl leading-none text-text-muted disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label={locale === 'ru' ? 'Предыдущий день' : 'Previous day'}
+          >
+            ←
+          </button>
+          <div className="min-w-0 text-center">
+            <div className="text-sm font-semibold uppercase text-text">
+              {activeMobileDayIso ? formatDayLabel(activeMobileDayIso, locale) : ''}
+            </div>
+            <div className="text-[11px] text-text-muted">{activeMobileDayIso}</div>
           </div>
+          <button
+            type="button"
+            onClick={goMobileNextDay}
+            disabled={!canGoMobileNext}
+            className="h-9 w-9 rounded-full border border-border text-xl leading-none text-text-muted disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label={locale === 'ru' ? 'Следующий день' : 'Next day'}
+          >
+            →
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-2 rounded-lg bg-bg-elevated/80 p-2">
+          {activeMobileDaySessions.length === 0 && (
+            <div className="rounded-lg border border-dashed border-border bg-bg-tertiary/60 px-3 py-5 text-center text-sm text-text-muted">
+              {locale === 'ru' ? 'На выбранный день занятий нет' : 'No sessions for selected day'}
+            </div>
+          )}
+          {activeMobileDaySessions.map((session) => {
+            const trainer = trainerById.get(session.trainerId);
+            const isPast = isPastSession(session.startsAt, session.durationMin, nowTimestamp);
+            const available = !isPast && session.bookedCount < session.capacity;
+            const isSelected = selected?.id === session.id;
+            const workoutType = getWorkoutTypeBySessionTitle(session.title);
+            const sessionTrainingTypeId = workoutType?.scheduleTemplateId ?? '';
+            const sessionIntensity = getIntensityBySession(session.level, session.title);
+            const matchesTrainer = !trainerFilter || trainerFilter === session.trainerId;
+            const matchesDifficulty = !difficultyFilter || difficultyFilter === `${sessionIntensity}`;
+            const matchesTrainingType = !trainingTypeFilter || trainingTypeFilter === sessionTrainingTypeId;
+            const hasActiveFilters = Boolean(trainerFilter || difficultyFilter || trainingTypeFilter);
+            const isFilterMatch = hasActiveFilters && matchesTrainer && matchesDifficulty && matchesTrainingType;
+            const trainerName = trainer ? getTrainerShortName(trainer) : '';
+            const timeAccentColor = workoutType?.color ?? '#CBD5E1';
+            const localizedTitle = t(session.title, locale);
+            const localizedDescription = t(session.description, locale);
+            const descriptionPreview = truncateDescription(localizedDescription, SCHEDULE_DESCRIPTION_MAX_CHARS);
+
+            return (
+              <button
+                key={session.id}
+                type="button"
+                onClick={() => setSelected(session)}
+                className={`h-[88px] w-full transform-gpu overflow-hidden rounded-xl border p-3 text-left transition-all duration-300 ease-out active:scale-[0.99] ${
+                  isSelected
+                    ? '-translate-y-0.5 border-[var(--accent)]/40 bg-bg-tertiary/95 shadow-[0_14px_34px_rgba(255,47,88,0.24)]'
+                    : isPast
+                      ? 'border-border/70 bg-bg-tertiary/35 text-text-muted shadow-sm'
+                      : 'border-border bg-bg-tertiary/95 shadow-sm'
+                } ${isFilterMatch ? 'border-state-success shadow-[0_0_0_1px_rgba(23,185,120,0.4)]' : ''}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className={`whitespace-nowrap text-base leading-none font-semibold ${isPast ? 'text-text-muted' : ''}`}>
+                    {getTimeRangeLabel(session.startsAt, session.durationMin)}
+                  </div>
+                  <div
+                    className={
+                      isPast
+                        ? 'shrink-0 whitespace-nowrap text-xs font-semibold text-text-muted'
+                        : available
+                          ? 'shrink-0 whitespace-nowrap text-xs font-semibold text-state-success'
+                          : 'shrink-0 whitespace-nowrap text-xs font-semibold text-state-warning'
+                    }
+                  >
+                    {isPast
+                      ? locale === 'ru'
+                        ? 'прошло'
+                        : 'finished'
+                      : available
+                        ? locale === 'ru'
+                          ? 'есть места'
+                          : 'available'
+                        : locale === 'ru'
+                          ? 'мест нет'
+                          : 'sold out'}
+                  </div>
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <div className={`inline-flex min-w-0 items-center gap-2 text-sm font-medium ${isPast ? 'text-text-muted' : ''}`}>
+                    <span
+                      aria-hidden="true"
+                      className="h-[16px] w-[5px] shrink-0 rounded-full"
+                      style={{backgroundColor: timeAccentColor}}
+                    />
+                    <span className="truncate">{localizedTitle}</span>
+                  </div>
+                  <div className={`max-w-[92px] shrink-0 truncate whitespace-nowrap text-right text-sm ${isPast ? 'text-text-muted/80' : 'text-text-muted'}`}>
+                    {trainerName}
+                  </div>
+                </div>
+                <div className={`mt-1 min-h-[1.25rem] truncate text-xs leading-snug ${isPast ? 'text-text-muted/80' : 'text-text-muted'}`}>
+                  {descriptionPreview || '\u00A0'}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div
-        ref={contentScrollerRef}
-        className="overflow-x-auto pb-2 scrollbar-hidden touch-auto overscroll-x-contain"
-        style={{touchAction: 'manipulation'}}
-      >
-        <div style={{minWidth: `${Math.max(980, visibleDays.length * 220)}px`}}>
-          <div className="mb-1 grid gap-3" style={gridStyle}>
-            {visibleDays.map((day, dayIndex) => (
-              <div
-                key={day}
-                className={`rounded-lg px-2 pb-1 pt-2 text-sm font-semibold uppercase text-text-muted ${
-                  dayIndex % 2 === 0 ? 'bg-bg-elevated/80' : 'bg-bg-tertiary/60'
+      <div className="hidden md:block">
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hidden">
+          {weekRanges.map((range, index) => {
+            const active = range.startIndex === activeWeekStartIndex;
+            return (
+              <button
+                key={`${range.startIso}-${range.endIso}`}
+                type="button"
+                onClick={() => handleWeekClick(range.startIndex)}
+                disabled={isPendingWeekSwitch}
+                className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  active
+                    ? 'border-[var(--accent)]/60 bg-[var(--accent)]/12 text-[var(--accent)]'
+                    : 'border-border bg-bg-elevated text-text-muted hover:text-text'
                 }`}
               >
-                {formatDayLabel(day, locale)}
-              </div>
-            ))}
+                {formatWeekLabel(range.startIso, range.endIso, index + 1, locale)}
+              </button>
+            );
+          })}
+        </div>
+
+        <div
+          ref={topScrollerRef}
+          className="mt-[5px] mb-[5px] overflow-x-auto scrollbar-minimal touch-pan-x"
+          aria-label={locale === 'ru' ? 'Верхняя прокрутка расписания' : 'Top schedule scroll'}
+        >
+          <div style={{width: `${topTrackWidth}px`}}>
+            <div className="grid gap-3" style={gridStyle}>
+              {visibleDays.map((day) => (
+                <div key={`${day}-top-scroll`} className="h-2 rounded-full bg-border/65" />
+              ))}
+            </div>
           </div>
+        </div>
 
-          <div className="grid gap-3" style={gridStyle}>
-            {visibleByDay.map((daySessions, dayIndex) => (
-              <div
-                key={visibleDays[dayIndex]}
-                className={`flex flex-col gap-2 rounded-lg p-2 ${
-                  dayIndex % 2 === 0 ? 'bg-bg-elevated/80' : 'bg-bg-tertiary/60'
-                }`}
-              >
-                {daySessions.map((session) => {
-                  const trainer = trainerById.get(session.trainerId);
-                  const isPast = isPastSession(session.startsAt, session.durationMin, nowTimestamp);
-                  const available = !isPast && session.bookedCount < session.capacity;
-                  const isSelected = selected?.id === session.id;
-                  const workoutType = getWorkoutTypeBySessionTitle(session.title);
-                  const sessionTrainingTypeId = workoutType?.scheduleTemplateId ?? '';
-                  const sessionIntensity = getIntensityBySession(session.level, session.title);
-                  const matchesTrainer = !trainerFilter || trainerFilter === session.trainerId;
-                  const matchesDifficulty = !difficultyFilter || difficultyFilter === `${sessionIntensity}`;
-                  const matchesTrainingType = !trainingTypeFilter || trainingTypeFilter === sessionTrainingTypeId;
-                  const hasActiveFilters = Boolean(trainerFilter || difficultyFilter || trainingTypeFilter);
-                  const isFilterMatch = hasActiveFilters && matchesTrainer && matchesDifficulty && matchesTrainingType;
-                  const trainerName = trainer ? getTrainerShortName(trainer) : '';
-                  const timeAccentColor = workoutType?.color ?? '#CBD5E1';
-                  const localizedTitle = t(session.title, locale);
-                  const localizedDescription = t(session.description, locale);
-                  const descriptionPreview = truncateDescription(localizedDescription, SCHEDULE_DESCRIPTION_MAX_CHARS);
+        <div
+          ref={contentScrollerRef}
+          className="overflow-x-auto pb-2 scrollbar-hidden touch-auto overscroll-x-contain"
+          style={{touchAction: 'manipulation'}}
+        >
+          <div style={{minWidth: `${Math.max(980, visibleDays.length * 220)}px`}}>
+            <div className="mb-1 grid gap-3" style={gridStyle}>
+              {visibleDays.map((day, dayIndex) => (
+                <div
+                  key={day}
+                  className={`rounded-lg px-2 pb-1 pt-2 text-sm font-semibold uppercase text-text-muted ${
+                    dayIndex % 2 === 0 ? 'bg-bg-elevated/80' : 'bg-bg-tertiary/60'
+                  }`}
+                >
+                  {formatDayLabel(day, locale)}
+                </div>
+              ))}
+            </div>
 
-                  return (
-                    <button
-                      key={session.id}
-                      type="button"
-                      onClick={() => setSelected(session)}
-                      className={`h-[80px] w-full transform-gpu overflow-hidden rounded-xl border p-3 text-left transition-all duration-300 ease-out active:scale-[0.99] ${
-                        isSelected
-                          ? '-translate-y-0.5 border-[var(--accent)]/40 bg-bg-tertiary/95 shadow-[0_14px_34px_rgba(255,47,88,0.24)]'
-                          : isPast
-                            ? 'border-border/70 bg-bg-tertiary/35 text-text-muted shadow-sm'
-                            : 'border-border bg-bg-tertiary/95 shadow-sm hover:-translate-y-0.5 hover:shadow-md'
-                      } ${isFilterMatch ? 'border-state-success shadow-[0_0_0_1px_rgba(23,185,120,0.4)]' : ''}`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className={`whitespace-nowrap text-base leading-none font-semibold ${isPast ? 'text-text-muted' : ''}`}>
-                          {getTimeRangeLabel(session.startsAt, session.durationMin)}
-                        </div>
-                        <div
-                          className={
-                            isPast
-                              ? 'shrink-0 whitespace-nowrap text-xs font-semibold text-text-muted'
-                              : available
-                              ? 'shrink-0 whitespace-nowrap text-xs font-semibold text-state-success'
-                              : 'shrink-0 whitespace-nowrap text-xs font-semibold text-state-warning'
-                          }
-                        >
-                          {isPast
-                            ? locale === 'ru'
-                              ? 'прошло'
-                              : 'finished'
-                            : available
+            <div className="grid gap-3" style={gridStyle}>
+              {visibleByDay.map((daySessions, dayIndex) => (
+                <div
+                  key={visibleDays[dayIndex]}
+                  className={`flex flex-col gap-2 rounded-lg p-2 ${
+                    dayIndex % 2 === 0 ? 'bg-bg-elevated/80' : 'bg-bg-tertiary/60'
+                  }`}
+                >
+                  {daySessions.map((session) => {
+                    const trainer = trainerById.get(session.trainerId);
+                    const isPast = isPastSession(session.startsAt, session.durationMin, nowTimestamp);
+                    const available = !isPast && session.bookedCount < session.capacity;
+                    const isSelected = selected?.id === session.id;
+                    const workoutType = getWorkoutTypeBySessionTitle(session.title);
+                    const sessionTrainingTypeId = workoutType?.scheduleTemplateId ?? '';
+                    const sessionIntensity = getIntensityBySession(session.level, session.title);
+                    const matchesTrainer = !trainerFilter || trainerFilter === session.trainerId;
+                    const matchesDifficulty = !difficultyFilter || difficultyFilter === `${sessionIntensity}`;
+                    const matchesTrainingType = !trainingTypeFilter || trainingTypeFilter === sessionTrainingTypeId;
+                    const hasActiveFilters = Boolean(trainerFilter || difficultyFilter || trainingTypeFilter);
+                    const isFilterMatch = hasActiveFilters && matchesTrainer && matchesDifficulty && matchesTrainingType;
+                    const trainerName = trainer ? getTrainerShortName(trainer) : '';
+                    const timeAccentColor = workoutType?.color ?? '#CBD5E1';
+                    const localizedTitle = t(session.title, locale);
+                    const localizedDescription = t(session.description, locale);
+                    const descriptionPreview = truncateDescription(localizedDescription, SCHEDULE_DESCRIPTION_MAX_CHARS);
+
+                    return (
+                      <button
+                        key={session.id}
+                        type="button"
+                        onClick={() => setSelected(session)}
+                        className={`h-[80px] w-full transform-gpu overflow-hidden rounded-xl border p-3 text-left transition-all duration-300 ease-out active:scale-[0.99] ${
+                          isSelected
+                            ? '-translate-y-0.5 border-[var(--accent)]/40 bg-bg-tertiary/95 shadow-[0_14px_34px_rgba(255,47,88,0.24)]'
+                            : isPast
+                              ? 'border-border/70 bg-bg-tertiary/35 text-text-muted shadow-sm'
+                              : 'border-border bg-bg-tertiary/95 shadow-sm hover:-translate-y-0.5 hover:shadow-md'
+                        } ${isFilterMatch ? 'border-state-success shadow-[0_0_0_1px_rgba(23,185,120,0.4)]' : ''}`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className={`whitespace-nowrap text-base leading-none font-semibold ${isPast ? 'text-text-muted' : ''}`}>
+                            {getTimeRangeLabel(session.startsAt, session.durationMin)}
+                          </div>
+                          <div
+                            className={
+                              isPast
+                                ? 'shrink-0 whitespace-nowrap text-xs font-semibold text-text-muted'
+                                : available
+                                  ? 'shrink-0 whitespace-nowrap text-xs font-semibold text-state-success'
+                                  : 'shrink-0 whitespace-nowrap text-xs font-semibold text-state-warning'
+                            }
+                          >
+                            {isPast
                               ? locale === 'ru'
-                                ? 'есть места'
-                                : 'available'
-                              : locale === 'ru'
-                                ? 'мест нет'
-                                : 'sold out'}
+                                ? 'прошло'
+                                : 'finished'
+                              : available
+                                ? locale === 'ru'
+                                  ? 'есть места'
+                                  : 'available'
+                                : locale === 'ru'
+                                  ? 'мест нет'
+                                  : 'sold out'}
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between gap-3">
-                        <div className={`inline-flex min-w-0 items-center gap-2 text-sm font-medium ${isPast ? 'text-text-muted' : ''}`}>
-                          <span
-                            aria-hidden="true"
-                            className="h-[16px] w-[5px] shrink-0 rounded-full"
-                            style={{backgroundColor: timeAccentColor}}
-                          />
-                          <span className="truncate">{localizedTitle}</span>
+                        <div className="mt-1 flex items-center justify-between gap-3">
+                          <div className={`inline-flex min-w-0 items-center gap-2 text-sm font-medium ${isPast ? 'text-text-muted' : ''}`}>
+                            <span
+                              aria-hidden="true"
+                              className="h-[16px] w-[5px] shrink-0 rounded-full"
+                              style={{backgroundColor: timeAccentColor}}
+                            />
+                            <span className="truncate">{localizedTitle}</span>
+                          </div>
+                          <div className={`max-w-[92px] shrink-0 truncate whitespace-nowrap text-right text-sm ${isPast ? 'text-text-muted/80' : 'text-text-muted'}`}>
+                            {trainerName}
+                          </div>
                         </div>
-                        <div className={`max-w-[92px] shrink-0 truncate whitespace-nowrap text-right text-sm ${isPast ? 'text-text-muted/80' : 'text-text-muted'}`}>
-                          {trainerName}
+                        <div className={`mt-1 min-h-[1.25rem] truncate text-xs leading-snug ${isPast ? 'text-text-muted/80' : 'text-text-muted'}`}>
+                          {descriptionPreview || '\u00A0'}
                         </div>
-                      </div>
-                      <div className={`mt-1 min-h-[1.25rem] truncate text-xs leading-snug ${isPast ? 'text-text-muted/80' : 'text-text-muted'}`}>
-                        {descriptionPreview || '\u00A0'}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
