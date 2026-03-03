@@ -1,52 +1,69 @@
 # VibeRide
 
-## Run
+## Стек проекта
 
-1. Install dependencies:
+- Next.js 16 + React 18 + TypeScript
+- Prisma ORM
+- PostgreSQL (локальная БД в Docker) / Supabase Postgres (демо-деплой)
+- NextAuth.js (аутентификация)
+- Tailwind CSS
+- Zod
+
+## Демо-деплой
+
+Демонстрационная версия развернута через:
+- Vercel (хостинг приложения)
+- Supabase (облачная база данных)
+
+Ссылка: https://vibe-ride.vercel.app/
+
+## Запуск
+
+1. Установите зависимости:
 ```bash
 npm install
 ```
 
-2. Build:
+2. Соберите проект:
 ```bash
 npm run build
 ```
 
-3. Start:
+3. Запустите приложение:
 ```bash
 npm start
 ```
 
-`npm start` automatically:
-- starts local PostgreSQL in Docker (`docker compose up -d db`)
-- applies Prisma schema to DB (`prisma db push`)
-- seeds mock users/trainers/sessions/history (`prisma db seed`)
-- runs Next.js server
+`npm start` автоматически:
+- запускает локальный PostgreSQL в Docker (`docker compose up -d db`)
+- применяет Prisma-схему к БД (`prisma db push`)
+- заполняет БД мок-данными (пользователи/тренеры/сессии/история) (`prisma db seed`)
+- запускает Next.js сервер
 
-## Notes
+## Примечания
 
-- Database connection is configured in `.env` via `POSTGRES_PRISMA_URL` (and optionally `POSTGRES_URL_NON_POOLING` for migrations).
-- Docker Desktop must be installed and running before `npm start`.
+- Подключение к базе настраивается в `.env` через `POSTGRES_PRISMA_URL` (и опционально `POSTGRES_URL_NON_POOLING` для миграций).
+- Перед `npm start` должен быть установлен и запущен Docker Desktop.
 
-## Mock Accounts (Demo)
+## Тестовые аккаунты (Demo)
 
-1) Client
-Role: client
-Email: client@viberide.local
-Password: Client123!
+1. Клиент
+Role: client  
+Email: client@viberide.local  
+Password: Client123!  
 Name: Demo Client
 
-2) Admin
-Role: admin
-Email: admin@viberide.local
-Password: Admin123!
+2. Администратор
+Role: admin  
+Email: admin@viberide.local  
+Password: Admin123!  
 Name: Demo Admin
 
-3) Trainer
-Role: trainer
-Email: trainer@viberide.local
-Password: Trainer123!
+3. Тренер
+Role: trainer  
+Email: trainer@viberide.local  
+Password: Trainer123!  
 Name: Demo Trainer
 
-Note:
-These are mock credentials for testing/demo only.
+Примечание:  
+Это тестовые учетные данные только для демонстрации и проверки.
